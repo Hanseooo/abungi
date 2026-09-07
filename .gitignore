@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.domain-build/
+coverage/
+playwright-report/
+test-results/
+.vite/
+*.log
+.DS_Store
+Thumbs.db
+.worktrees/
