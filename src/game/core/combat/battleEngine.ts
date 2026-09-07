@@ -37,6 +37,7 @@ function choreographyForItem(item:ItemDefinition):NonNullable<AbilityDefinition[
   if(item.effects.some(effect=>effect.kind==='status'&&effect.statusId==='fortified'))return 'defense';
   if(item.effects.some(effect=>effect.kind==='status'))return 'buff';
   if(item.effects.some(effect=>effect.kind==='healPercent'||effect.kind==='healPartyPercent'||effect.kind==='restorePP'))return 'buff';
+  if(item.effects.some(effect=>effect.kind==='damage'))return 'ranged';
   return 'utility';
 }
 
@@ -401,6 +402,7 @@ function resolveItem(state:BattleState,actor:BattleUnit,command:Extract<BattleCo
     else if(effect.kind==='cleanse'){for(const id of ids){const target=state.units[id];if(target)cleanseOne(target,effect.count,events);}}
     else if(effect.kind==='restorePP'){for(const id of ids){const target=state.units[id];if(target?.abilityPP){const abilityId=Object.keys(target.abilityPP).sort((a,b)=>target.abilityPP![a]-target.abilityPP![b])[0];if(abilityId){const amount=Math.round(effect.amount*(state.relicIds.includes('blue-tonic-cap')?1.25:1));const before=target.abilityPP[abilityId];const max=getAbility(abilityId).maxPP+(target.upgradedAbilities?.includes(abilityId)?getAbility(abilityId).upgrade.maxPPDelta??0:0);target.abilityPP[abilityId]=Math.min(max,before+amount);const restored=target.abilityPP[abilityId]-before;if(restored>0)events.push({type:'message',text:`${target.displayName}'s ${getAbility(abilityId).name} recovered ${restored} PP.`});}}}}
     else if(effect.kind==='revive'){for(const id of ids){const target=state.units[id];if(target&&!target.alive){const amount=Math.max(1,Math.round(target.maxHp*effect.percentMaxHp));setHp(target,amount);events.push({type:'revive',targetId:target.id,amount},{type:'heal',targetId:target.id,amount});}}}
+    else if(effect.kind==='damage'){for(const id of ids){const target=state.units[id];if(target?.alive)damageOne(state,actor,target,effect.power,'neutral',rng,events,{cannotMiss:true});}}
   }
 }
 

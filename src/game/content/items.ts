@@ -21,6 +21,7 @@ export interface ItemDefinition {
     | {kind:'status'; statusId:StatusId; duration:number}
     | {kind:'cleanse'; count:number}
     | {kind:'revive'; percentMaxHp:number}
+    | {kind:'damage'; power:number}
   >;
 }
 
@@ -34,6 +35,7 @@ export const ITEMS: ItemDefinition[] = [
   {id:'smoke-bomb',name:'Smoke Bomb',description:'Escape a normal battle. Cannot escape elites or bosses.',target:'self',price:20,rarity:'uncommon',category:'utility',battleOnly:true,escape:true,effects:[]},
   {id:'cleanser',name:'Cleanser',description:'Remove up to two negative statuses from one ally.',target:'ally-one',price:15,rarity:'common',category:'utility',effects:[{kind:'cleanse',count:2}]},
   {id:'circuit-brew',name:'Circuit Brew',description:'Restore 3 PP to the lowest-PP move of every living ally.',target:'ally-all',price:30,rarity:'uncommon',category:'resource',effects:[{kind:'restorePP',amount:3}]},
+  {id:'brick-in-a-sock',name:'Brick in a Sock',description:'Throw for 65 power at one enemy. No affinity, no PP, anyone can use it.',target:'enemy-one',price:22,rarity:'common',category:'tactical',battleOnly:true,effects:[{kind:'damage',power:65}]},
   {id:'revive-kit',name:'Revive Kit',description:'Revive one KO ally at 30% Max HP. Cannot rescue the party after total defeat.',target:'ally-one',price:46,rarity:'rare',category:'revive',battleOnly:true,targetKo:true,effects:[{kind:'revive',percentMaxHp:0.30}]},
 ];
 
