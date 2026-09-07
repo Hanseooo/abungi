@@ -204,6 +204,7 @@ test('settings expose audio, speed and reduced motion controls', async ({ page }
 });
 
 for (const viewport of [
+  { width: 375, height: 667 },
   { width: 390, height: 844 },
   { width: 768, height: 1024 },
   { width: 1024, height: 768 },
@@ -221,3 +222,29 @@ for (const viewport of [
     await expectNoHorizontalOverflow(page);
   });
 }
+
+test('battle HUD stays legible and tappable on a short phone', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await startSeededRun(page);
+  await chooseReachableNode(page, 'FIGHT');
+  await expect(page.locator('.battle-screen')).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  // WS1.2: status stays scannable; skill name and PP stay visible.
+  await expect(page.locator('.ally-stage .unit-label .status-strip, .ally-stage .unit-label .status-empty').first()).toBeVisible();
+  await expect(page.locator('.skill-main strong').first()).toBeVisible();
+  await expect(page.locator('.skill-main .pp-count').first()).toBeVisible();
+  await expect(page.locator('.skill-main > small').first()).toBeVisible();
+
+  // WS1.4: named touch targets reach 44px.
+  for (const selector of ['.action-tabs button', '.battle-utility button']) {
+    const box = await page.locator(selector).first().boundingBox();
+    expect(box, `${selector} has no box`).toBeTruthy();
+    expect(box!.height, `${selector} height`).toBeGreaterThanOrEqual(44);
+  }
+
+  // WS1.1: the enemy-move message is not clipped.
+  const clipped = await page.locator('.combat-message strong').first()
+    .evaluate(el => el.scrollHeight > el.clientHeight + 1);
+  expect(clipped, 'combat message text is clipped').toBe(false);
+});
