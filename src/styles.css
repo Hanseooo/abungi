@@ -291,9 +291,9 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 .unit-cutout-wrap.is-hit { animation:cardboard-hit var(--dur-hit) ease; }
 .unit-cutout-wrap.is-healed { animation:heal-bob var(--dur-heal) ease; }
 .unit-cutout-wrap.is-ko { filter:grayscale(.9) brightness(.65); transform:rotate(11deg) translateY(8px); opacity:.58; }
-.combat-message { grid-area:message; min-height:42px; border:2px solid var(--ink); background:var(--ink); color:var(--paper); padding:5px 8px; display:grid; grid-template-columns:auto 1fr; gap:2px 8px; align-items:center; box-shadow:2px 3px 0 var(--mustard); }
+.combat-message { grid-area:message; position:relative; z-index:8; min-height:58px; border:2px solid var(--ink); background:var(--ink); color:var(--paper); padding:5px 8px; display:grid; grid-template-columns:auto 1fr; gap:2px 8px; align-items:center; box-shadow:2px 3px 0 var(--mustard); }
 .combat-message > span { font-size:.62rem; color:var(--mustard); font-weight:900; letter-spacing:.08em; }
-.combat-message strong { font-size:.72rem; line-height:1.25; }
+.combat-message strong { font-size:.72rem; line-height:1.25; overflow-wrap:anywhere; }
 .combat-message small { grid-column:1/-1; color:#f4a89e; font-size:.62rem; font-weight:800; }
 .battle-hud { grid-area:hud; min-height:48px; display:grid; gap:4px; }
 .actor-ticket { border:2px solid var(--ink); background:#dbc6a4; padding:5px 7px; display:flex; gap:7px; align-items:center; box-shadow:2px 3px 0 rgba(30,26,23,.32); }
@@ -372,7 +372,7 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
   .unit-label { padding:6px; }
   .unit-label strong { font-size:.7rem; }
   .unit-label .affinity span { display:inline; }
-  .combat-message { min-height:48px; padding:7px 10px; }
+  .combat-message { min-height:62px; padding:7px 10px; }
   .combat-message strong { font-size:.78rem; }
   .battle-hud { grid-template-columns:1fr auto; }
   .skill-grid { gap:7px; }
@@ -679,8 +679,9 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 .choreo-summon .vfx-particle { background: var(--teal); animation: buff-particles calc(.65s * var(--anim-scale,1)) ease-out both; }
 .choreo-buff .p2, .choreo-defense .p2, .choreo-summon .p2 { animation-delay: .07s; }
 .choreo-buff .p3, .choreo-defense .p3, .choreo-summon .p3 { animation-delay: .14s; }
-.vfx-multihit, .vfx-summon-mark { position: absolute; right: 13%; top: 18%; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); padding: 4px 7px; font-weight: 950; transform: rotate(-3deg); }
-.vfx-summon-mark { left: 15%; right: auto; top: 32%; }
+.vfx-multihit, .vfx-summon-mark { position:absolute; z-index:5; border:2px solid var(--ink); background:var(--paper); color:var(--ink); padding:4px 7px; font-size:.62rem; font-weight:950; transform:rotate(-3deg); }
+.vfx-multihit { top:2px; right:2px; }
+.vfx-summon-mark { top:2px; left:2px; }
 
 .enemy-callout { border-color: var(--red-dark); background: #ead4c9; box-shadow: 4px 5px 0 var(--red-dark); }
 .enemy-callout > span { background: var(--red); color: white; }
