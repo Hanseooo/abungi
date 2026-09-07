@@ -156,4 +156,6 @@ Abungi is a static Vite application. No Vercel Functions or Vercel-specific game
 - `docs/superpowers/plans/2026-09-07-abungi-v02-polish.md` — v0.2 implementation plan.
 - `docs/BALANCE_AUDIT_V02.md` — 7,920-battle character/pacing audit.
 - `docs/ECONOMY_AUDIT_V02.md` — 10,000-route plus shop/reward/event economy audit.
+- `docs/BALANCE_AUDIT_V03.md` — 7,920-battle v0.3 character/pacing audit.
+- `docs/ECONOMY_AUDIT_V03.md` — v0.3 route plus shop/reward/event economy audit.
 - `docs/VERIFICATION_V02.md` — exact v0.2 verification status, including the sandbox registry limitation.
