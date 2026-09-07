@@ -21,6 +21,7 @@ export const BALANCE = {
   inventoryCapacity: 6,
   restRecoverPercent: 0.35,
   restRefreshMissingPercent: 0.30,
+  restReviveHpPercent: 0.10,
   bossRecoveryHpPercent: 0.30,
   bossRecoveryMissingPpPercent: 0.25,
   regionReviveHpPercent: 0.25,

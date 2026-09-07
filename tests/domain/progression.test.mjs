@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SeededRng } from '../../.domain-build/core/rng/seededRng.js';
 import { createRun, completeRouteNode, advanceRegion } from '../../.domain-build/core/progression/run.js';
-import { applyRestChoice } from '../../.domain-build/core/progression/rest.js';
+import { applyRestChoice, previewRestChoice } from '../../.domain-build/core/progression/rest.js';
 import { generateReward, claimReward } from '../../.domain-build/core/progression/rewards.js';
 import { generateShopOffers, purchaseShopOffer } from '../../.domain-build/core/progression/shop.js';
 import { applyEventChoice, canChooseEvent } from '../../.domain-build/core/progression/events.js';
@@ -16,20 +16,30 @@ test('new run starts with exactly three persistent party members and a seeded ro
   assert.equal(typeof run.rngState,'number');
 });
 
-test('rest Recover restores 35% max HP to living members without reviving KO members',()=>{
+test('rest Recover heals living members and weakly revives KO members',()=>{
   const run=createRun(['earl','hans','leandre'],1);
   run.party[0].hp=10;run.party[1].hp=0;run.party[2].hp=20;
   const next=applyRestChoice(run,'recover');
   assert.equal(next.party[0].hp,49); // Earl: 10 + round(110 * .35)=49
-  assert.equal(next.party[1].hp,0);
-  assert.equal(next.party[2].hp,55);
+  assert.equal(next.party[1].hp,9);  // Hans KO: max(1, round(92 * .10))=9
+  assert.equal(next.party[2].hp,55); // Leandre: 20 + round(100 * .35)=55
+  // PP unchanged by Recover
+  assert.deepEqual(next.party[0].abilityPP,run.party[0].abilityPP);
+  // preview matches apply
+  const preview=previewRestChoice(run,'recover');
+  assert.equal(preview.legal,true);
+  assert.equal(preview.changes.length,3); // all three members change
 });
 
 test('rest Refresh restores 30% of missing PP across every move',()=>{
   const run=createRun(['earl','hans','leandre'],2);
   const before=run.party[0].abilityPP.yosi; run.party[0].abilityPP.yosi=0;
+  run.party[0].abilityPP['knuckle-up']=17; // maxPP=18, missing=1, round(1*0.30)=0
+  run.party[1].hp=0; run.party[1].abilityPP['sentry-unit']=0; // KO Hans still gets PP restored
   const next=applyRestChoice(run,'refresh');
   assert.equal(next.party[0].abilityPP.yosi,Math.round(before*0.30));
+  assert.equal(next.party[0].abilityPP['knuckle-up'],17); // missing-1 rounds to zero
+  assert.equal(next.party[1].abilityPP['sentry-unit'],2); // round(7*0.30)=2
 });
 
 test('shop is deterministic and Leandre adds one inventory choice',()=>{
