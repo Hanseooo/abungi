@@ -84,3 +84,29 @@ test('the primary title CTA sets an explicit mustard/ink pair without touching .
   const base = css.match(/\n\.paper-button \{[^}]*\}/s)?.[0] ?? '';
   assert.doesNotMatch(base, /color:/, '.paper-button must stay colour-neutral for the other screens');
 });
+
+test('affinity colours are single-sourced as :root tokens', () => {
+  const css = read('src/styles.css');
+  for (const [affinity, hex] of [['might','#d87c68'],['tech','#75a1aa'],['trick','#d5b24c'],['mystic','#9b78a7'],['neutral','#aaa397']]) {
+    assert.match(css, new RegExp(`--affinity-${affinity}:\\s*${hex}`), `missing --affinity-${affinity} token`);
+    assert.match(css, new RegExp(`\\.affinity-${affinity} b \\{[^}]*background:\\s*var\\(--affinity-${affinity}\\)`, 's'), `.affinity-${affinity} b must read its token`);
+  }
+});
+
+test('all four character surfaces emit and consume --char-accent', () => {
+  const css = read('src/styles.css');
+  const battle = read('src/features/battle/BattleScreen.tsx');
+  const party = read('src/features/party-select/PartySelectScreen.tsx');
+  assert.match(party, /charAccentStyle\(/, 'roster card must emit the accent');
+  assert.ok((battle.match(/charAccentStyle\(/g) ?? []).length >= 2, 'unit shell and actor ticket must emit the accent');
+  for (const selector of ['.roster-card', '.unit-label', '.turn-flag', '.actor-ticket']) {
+    const block = css.match(new RegExp(`\\${selector} \\{[^}]*\\}`, 's'))?.[0] ?? '';
+    assert.match(block, /var\(--char-accent/, `${selector} must consume --char-accent`);
+  }
+});
+
+test('the affinity letter-mark and label are not recoloured by the accent', () => {
+  const css = read('src/styles.css');
+  const mark = css.match(/\n\.affinity \{[^}]*\}/s)?.[0] ?? '';
+  assert.doesNotMatch(mark, /--char-accent/, 'affinity must never rely on colour alone');
+});
