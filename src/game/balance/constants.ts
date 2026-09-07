@@ -23,6 +23,7 @@ export const BALANCE = {
   restRefreshMissingPercent: 0.30,
   bossRecoveryHpPercent: 0.30,
   bossRecoveryMissingPpPercent: 0.25,
+  regionReviveHpPercent: 0.25,
   maxDeployables: 2,
   leandreClearanceCoinCost: 15,
   yMomentumDamagePerStack: 0.08,

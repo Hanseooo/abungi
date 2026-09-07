@@ -82,7 +82,17 @@ export function claimReward(input:RunState,reward:RewardState,choice:{relicId?:s
     for(const member of run.party){const c=getCharacter(member.characterId);if(member.hp>0)member.hp=Math.min(c.stats.maxHp,member.hp+Math.round(c.stats.maxHp*0.10));}
   }
   if(reward.bossRecovery){
-    for(const member of run.party){const c=getCharacter(member.characterId);if(member.hp>0)member.hp=Math.min(c.stats.maxHp,member.hp+Math.round(c.stats.maxHp*BALANCE.bossRecoveryHpPercent));for(const id of c.abilities){const a=getAbility(id);const max=a.maxPP+(member.upgradedAbilities.includes(id)?a.upgrade.maxPPDelta??0:0);const missing=max-member.abilityPP[id];member.abilityPP[id]=Math.min(max,member.abilityPP[id]+Math.round(missing*BALANCE.bossRecoveryMissingPpPercent*(run.relicIds.includes('blue-tonic-cap')?1.25:1)));}}
+    const survivorIds=new Set(run.party.filter(member=>member.hp>0).map(member=>member.characterId));
+    for(const member of run.party){
+      const c=getCharacter(member.characterId);
+      if(member.hp<=0)member.hp=Math.max(1,Math.round(c.stats.maxHp*BALANCE.regionReviveHpPercent));
+      else if(survivorIds.has(member.characterId))member.hp=Math.min(c.stats.maxHp,member.hp+Math.round(c.stats.maxHp*BALANCE.bossRecoveryHpPercent));
+      for(const id of c.abilities){
+        const a=getAbility(id);const max=a.maxPP+(member.upgradedAbilities.includes(id)?a.upgrade.maxPPDelta??0:0);
+        const missing=max-member.abilityPP[id];
+        member.abilityPP[id]=Math.min(max,member.abilityPP[id]+Math.round(missing*BALANCE.bossRecoveryMissingPpPercent*(run.relicIds.includes('blue-tonic-cap')?1.25:1)));
+      }
+    }
   }
   run.pendingReward=null;return run;
 }
