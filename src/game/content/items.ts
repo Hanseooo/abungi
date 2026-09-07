@@ -33,6 +33,7 @@ export const ITEMS: ItemDefinition[] = [
   {id:'guard-patch',name:'Guard Patch',description:'Grant Fortified for 2 turns. Fortified does not stack with itself.',target:'ally-one',price:21,rarity:'uncommon',category:'tactical',battleOnly:true,effects:[{kind:'status',statusId:'fortified',duration:2}]},
   {id:'smoke-bomb',name:'Smoke Bomb',description:'Escape a normal battle. Cannot escape elites or bosses.',target:'self',price:20,rarity:'uncommon',category:'utility',battleOnly:true,escape:true,effects:[]},
   {id:'cleanser',name:'Cleanser',description:'Remove up to two negative statuses from one ally.',target:'ally-one',price:15,rarity:'common',category:'utility',effects:[{kind:'cleanse',count:2}]},
+  {id:'circuit-brew',name:'Circuit Brew',description:'Restore 3 PP to the lowest-PP move of every living ally.',target:'ally-all',price:30,rarity:'uncommon',category:'resource',effects:[{kind:'restorePP',amount:3}]},
   {id:'revive-kit',name:'Revive Kit',description:'Revive one KO ally at 30% Max HP. Cannot rescue the party after total defeat.',target:'ally-one',price:46,rarity:'rare',category:'revive',battleOnly:true,targetKo:true,effects:[{kind:'revive',percentMaxHp:0.30}]},
 ];
 
