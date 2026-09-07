@@ -58,3 +58,18 @@ test('the multi-target enemy count is a cornered badge, not floating inline text
   const shared = css.match(/\.vfx-multihit, \.vfx-summon-mark \{[^}]*\}/s)?.[0] ?? '';
   assert.match(shared, /border:\s*2px solid var\(--ink\)/, 'the badge keeps the .target-corner ink border');
 });
+
+const shortScreenBlock = css => css.match(/@media \(max-height: 700px\) and \(max-width: 599px\) \{[\s\S]*?\n\}/)?.[0];
+
+test('the short-screen media query hides no status or skill information', () => {
+  const block = shortScreenBlock(read('src/styles.css'));
+  assert.ok(block, 'short-screen media query is missing');
+  assert.doesNotMatch(block, /display:\s*none/, 'nothing may be hidden outright on short screens except the decorative info dot');
+  assert.match(block, /\.action-tray \{[^}]*overflow-y:\s*auto/s, 'the tray scrolls instead of hiding rows');
+  assert.match(block, /\.unit-label \.status-strip \{/,'status keeps an explicit compact layout rule');
+});
+
+test('the skill description collapses to a clamp rather than vanishing', () => {
+  const block = shortScreenBlock(read('src/styles.css')) ?? '';
+  assert.match(block, /\.skill-main > small \{[^}]*-webkit-line-clamp:\s*2/s);
+});

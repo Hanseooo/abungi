@@ -416,10 +416,17 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 }
 
 @media (max-height: 700px) and (max-width: 599px) {
-  .battle-screen { grid-template-rows:auto minmax(90px,.8fr) auto minmax(90px,.8fr) auto auto; }
+  .battle-screen { gap:3px; grid-template-rows:auto minmax(84px,.75fr) auto minmax(84px,.75fr) auto minmax(0,auto); }
   .unit-cutout-wrap { height:58px; }
   .enemy-stage .unit-cutout-wrap { height:67px; }
-  .unit-label .status-strip { display:none; }
+  .unit-label { padding:3px; }
+  .unit-label .status-strip { margin-top:2px; max-height:none; gap:2px; }
+  .unit-label .status-strip button { min-height:26px; padding:1px 4px; }
+  .unit-label .status-info-dot { width:0; overflow:hidden; }
+  .actor-ticket { padding:3px 5px; }
+  .action-tray { max-height:42dvh; overflow-y:auto; overscroll-behavior:contain; }
+  .skill-main, .item-main { min-height:66px; padding:5px 6px; }
+  .skill-main > small { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .title-mark h1 { margin-bottom:12px; }
 }
 
