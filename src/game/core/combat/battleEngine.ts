@@ -382,7 +382,7 @@ function resolveEnemyTurn(state:BattleState,actor:BattleUnit,rng:SeededRng,event
   actor.guardActive=false;
   const before=clone(actor.statuses);
   const move=chooseEnemyMove(state,actor,rng); const targets=chooseEnemyTargets(state,actor,move,rng);
-  events.push({type:'actionStart',actorId:actor.id,label:move.name,actionId:move.id,choreography:move.choreography,side:'enemy'});
+  events.push({type:'actionStart',actorId:actor.id,label:move.name,actionId:move.id,choreography:move.choreography,side:'enemy',signature:move.signature===true&&state.tier==='boss'});
   const pseudo:AbilityDefinition={id:move.id,name:move.name,affinity:move.affinity,maxPP:99,target:move.target,description:'',effects:move.effects,upgrade:{description:''}};
   resolveEffects(state,actor,enemyMoveEffects(move),pseudo,targets,rng,events);
   const history=state.recentEnemyMoves[actor.id]??[];state.recentEnemyMoves[actor.id]=[...history,move.id].slice(-4);

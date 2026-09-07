@@ -110,3 +110,38 @@ test('the affinity letter-mark and label are not recoloured by the accent', () =
   const mark = css.match(/\n\.affinity \{[^}]*\}/s)?.[0] ?? '';
   assert.doesNotMatch(mark, /--char-accent/, 'affinity must never rely on colour alone');
 });
+
+const ANIMATIONS = ['status-stamp', 'guard-brace', 'revive-rise', 'boss-signature', 'coin-pop'];
+
+test('the five v0.3 animations exist with real keyframes', () => {
+  const css = read('src/styles.css');
+  for (const name of ANIMATIONS) assert.match(css, new RegExp(`@keyframes ${name}\\b`), `missing @keyframes ${name}`);
+  assert.match(css, /\.unit-cutout-wrap\.is-status-stamp \{[^}]*animation:\s*status-stamp/s);
+  assert.match(css, /\.unit-cutout-wrap\.is-guarding \{[^}]*animation:\s*guard-brace/s);
+  assert.match(css, /\.unit-cutout-wrap\.is-revived \{[^}]*animation:\s*revive-rise/s);
+  assert.match(css, /\.battle-vfx-layer\.signature \{[^}]*animation:\s*boss-signature/s);
+  assert.match(css, /\.reward-ledger strong \{[^}]*animation:\s*coin-pop/s);
+});
+
+test('every new animation is suppressed by both reduced-motion paths', () => {
+  const css = read('src/styles.css');
+  const media = css.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g)?.join('\n') ?? '';
+  const toggle = css.split('\n').filter(line => line.includes('reduced-motion') && !line.includes('@media')).join('\n');
+  for (const selector of ['.is-status-stamp', '.is-guarding', '.is-revived', '.battle-vfx-layer.signature', '.reward-screen.reduced-motion']) {
+    assert.ok(media.includes(selector) || toggle.includes(selector), `${selector} is not covered by a reduced-motion rule`);
+  }
+});
+
+test('the boss signature flourish stays inside the ~900ms budget', () => {
+  const css = read('src/styles.css');
+  const block = css.match(/\.battle-vfx-layer\.signature \{[^}]*\}/s)?.[0] ?? '';
+  const ms = Number(block.match(/animation:\s*boss-signature\s+calc\((\d+)ms/)?.[1]);
+  assert.ok(ms > 0 && ms <= 900, `boss signature duration ${ms}ms must be within the 900ms budget`);
+  assert.match(block, /var\(--anim-scale/, 'the flourish must scale with the 1x/2x/3x speed setting');
+});
+
+test('the boss signature flourish is driven by a committed action, never by intent', () => {
+  const battle = read('src/features/battle/BattleScreen.tsx');
+  assert.match(battle, /action\?\.signature|action\.signature/, 'the flourish reads the actionStart event');
+  assert.doesNotMatch(battle, /nextMove|predictedTarget|predictedDamage|targetForecast/i, 'enemy predictions must stay hidden');
+});

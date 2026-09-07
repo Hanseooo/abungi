@@ -143,7 +143,7 @@ export interface BattleState {
 }
 
 export type CombatEvent =
-  | { type: 'actionStart'; actorId: string; label: string; actionId?: string; choreography?: ChoreographyId; side?: Side }
+  | { type: 'actionStart'; actorId: string; label: string; actionId?: string; choreography?: ChoreographyId; side?: Side; signature?: boolean }
   | { type: 'lunge'; actorId: string }
   | { type: 'projectile'; actorId: string; targetId: string }
   | { type: 'hit'; targetId: string; heavy?: boolean }

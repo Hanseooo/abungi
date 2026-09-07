@@ -297,6 +297,9 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 .unit-cutout-wrap.is-acting { animation:attack-lunge var(--dur-attack) cubic-bezier(.2,.75,.35,1); }
 .unit-cutout-wrap.is-hit { animation:cardboard-hit var(--dur-hit) ease; }
 .unit-cutout-wrap.is-healed { animation:heal-bob var(--dur-heal) ease; }
+.unit-cutout-wrap.is-status-stamp { animation: status-stamp calc(300ms * var(--anim-scale,1)) ease-out; }
+.unit-cutout-wrap.is-guarding { animation: guard-brace calc(380ms * var(--anim-scale,1)) cubic-bezier(.25,.8,.4,1); }
+.unit-cutout-wrap.is-revived { animation: revive-rise calc(440ms * var(--anim-scale,1)) cubic-bezier(.2,.8,.3,1) both; }
 .unit-cutout-wrap.is-ko { filter:grayscale(.9) brightness(.65); transform:rotate(11deg) translateY(8px); opacity:.58; }
 .combat-message { grid-area:message; position:relative; z-index:8; min-height:58px; border:2px solid var(--ink); background:var(--ink); color:var(--paper); padding:5px 8px; display:grid; grid-template-columns:auto 1fr; gap:2px 8px; align-items:center; box-shadow:2px 3px 0 var(--mustard); }
 .combat-message > span { font-size:.62rem; color:var(--mustard); font-weight:900; letter-spacing:.08em; }
@@ -332,12 +335,19 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 .resolving-bar { width:42px; height:7px; border:1px solid var(--paper); overflow:hidden; position:relative; }
 .resolving-bar::after { content:""; position:absolute; top:0; bottom:0; width:18px; background:var(--mustard); animation:scan var(--dur-scan) linear infinite; }
 .battle-shake { animation:screen-shake var(--dur-shake) ease; }
+.battle-vfx-layer.signature { animation: boss-signature calc(880ms * var(--anim-scale,1)) ease-out both; }
+.reward-ledger strong { display: inline-block; animation: coin-pop calc(420ms * var(--anim-scale,1)) cubic-bezier(.2,.9,.3,1) both; }
 
 .battle-screen.speed-2x { --anim-scale: .5; --dur-pop: 260ms; --dur-attack: 195ms; --dur-hit: 165ms; --dur-heal: 215ms; --dur-scan: 275ms; --dur-shake: 105ms; }
 .battle-screen.speed-3x { --anim-scale: .333; --dur-pop: 173ms; --dur-attack: 130ms; --dur-hit: 110ms; --dur-heal: 143ms; --dur-scan: 183ms; --dur-shake: 70ms; }
 .battle-screen.reduced-motion .unit-cutout-wrap.is-acting,
 .battle-screen.reduced-motion .unit-cutout-wrap.is-hit,
-.battle-screen.reduced-motion .unit-cutout-wrap.is-healed { animation: none; }
+.battle-screen.reduced-motion .unit-cutout-wrap.is-healed,
+.battle-screen.reduced-motion .unit-cutout-wrap.is-status-stamp,
+.battle-screen.reduced-motion .unit-cutout-wrap.is-guarding,
+.battle-screen.reduced-motion .battle-vfx-layer.signature { animation: none; }
+.battle-screen.reduced-motion .unit-cutout-wrap.is-revived { animation: none; opacity: 1; filter: none; transform: none; }
+.reward-screen.reduced-motion .reward-ledger strong { animation: none; opacity: 1; transform: none; }
 .battle-screen.reduced-motion .number-pop { animation: number-fade var(--dur-pop) ease-out both; }
 
 /* PWA/fatal */
@@ -358,6 +368,11 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 @keyframes number-pop { 0%{opacity:0;transform:translate(-50%,8px) scale(.7)} 22%{opacity:1;transform:translate(-50%,-8px) scale(1.15)} 100%{opacity:0;transform:translate(-50%,-30px) scale(.92)} }
 @keyframes screen-shake { 0%,100%{transform:translate(0)} 20%{transform:translate(-3px,1px)} 40%{transform:translate(4px,-2px)} 60%{transform:translate(-2px,2px)} 80%{transform:translate(2px,-1px)} }
 @keyframes scan { from{left:-20px} to{left:48px} }
+@keyframes status-stamp { 0% { filter: brightness(1); transform: scale(1); } 22% { filter: brightness(1.9) contrast(1.2); transform: scale(1.06) rotate(-1.5deg); } 100% { filter: brightness(1); transform: scale(1); } }
+@keyframes guard-brace { 0% { transform: translateY(0) scaleY(1); } 35% { transform: translateY(4px) scaleY(.94) scaleX(1.05); } 70% { transform: translateY(1px) scaleY(1.01); } 100% { transform: translateY(0) scaleY(1); } }
+@keyframes revive-rise { 0% { opacity: .55; transform: rotate(11deg) translateY(8px); filter: grayscale(.9) brightness(.65); } 55% { opacity: 1; transform: rotate(-3deg) translateY(-6px) scale(1.04); filter: none; } 100% { opacity: 1; transform: none; filter: none; } }
+@keyframes boss-signature { 0% { opacity: 0; transform: scale(.9); } 14% { opacity: 1; transform: scale(1.03); } 44% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.06); } }
+@keyframes coin-pop { 0% { opacity: 0; transform: translateY(9px) scale(.8) rotate(-4deg); } 58% { opacity: 1; transform: translateY(-3px) scale(1.09) rotate(1.5deg); } 100% { opacity: 1; transform: none; } }
 
 @media (min-width: 600px) {
   .screen { padding: max(24px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left)); }
@@ -767,7 +782,13 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
   .deployable-piece.repair-drone .deployable-art i:first-child,
   .deployable-piece.firing .deployable-art i:nth-child(2),
   .deployable-piece.repairing,
-  .battle-vfx-layer i { animation: none !important; }
+  .battle-vfx-layer i,
+  .unit-cutout-wrap.is-status-stamp,
+  .unit-cutout-wrap.is-guarding,
+  .battle-vfx-layer.signature { animation: none !important; }
+  .unit-cutout-wrap.is-revived { animation: none !important; opacity: 1; filter: none; transform: none; }
+  .reward-screen.reduced-motion .reward-ledger strong,
+  .reward-ledger strong { animation: none !important; opacity: 1; transform: none; }
   .scene-layer { opacity: 1; }
   .battle-vfx-layer { display: none; }
 }
