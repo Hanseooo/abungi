@@ -27,18 +27,20 @@ function normalDrop(rng:SeededRng):string|undefined{
   return rng.weightedPick(pool).item.id;
 }
 
+// One option is always immediate value and one is always recovery, so the pick stays a
+// greed-versus-sustain decision rather than two flavours of the same answer.
 function normalSpoils(run:RunState,rng:SeededRng):RewardSpoilsChoice[]{
-  const choices:RewardSpoilsChoice[]=[
-    {id:'cash',label:'Take the Cash',description:'Pocket 5 additional coins.',coinBonus:5},
+  const greed:RewardSpoilsChoice[]=[{id:'cash',label:'Take the Cash',description:'Pocket 5 additional coins.',coinBonus:5}];
+  const sustain:RewardSpoilsChoice[]=[
     {id:'patch',label:'Patch Up',description:'Restore 5% Max HP to each living party member.',healPercent:0.05},
     {id:'ppcache',label:'PP Cache',description:'Restore 10% of missing PP across the party.',ppPercent:0.10},
   ];
   const hasSpace=run.inventory.reduce((sum,entry)=>sum+entry.quantity,0)<BALANCE.inventoryCapacity;
   if(hasSpace&&rng.chance(0.35)){
     const common=ITEMS.filter(item=>item.rarity==='common');
-    choices.push({id:'scavenge',label:'Scavenge',description:'Take one common item instead of extra cash or recovery.',itemId:rng.pick(common).id});
+    greed.push({id:'scavenge',label:'Scavenge',description:'Take one common item instead of extra cash or recovery.',itemId:rng.pick(common).id});
   }
-  return distinctPicks(choices,2,rng);
+  return [...distinctPicks(greed,1,rng),...distinctPicks(sustain,1,rng)];
 }
 
 export function generateReward(run:RunState,tier:EncounterTier,rng:SeededRng,encounterId?:string):RewardState{
@@ -84,11 +86,11 @@ export function claimReward(input:RunState,reward:RewardState,choice:{relicId?:s
     for(const member of run.party){const c=getCharacter(member.characterId);if(member.hp>0)member.hp=Math.min(c.stats.maxHp,member.hp+Math.round(c.stats.maxHp*0.10));}
   }
   if(reward.bossRecovery){
-    const survivorIds=new Set(run.party.filter(member=>member.hp>0).map(member=>member.characterId));
     for(const member of run.party){
       const c=getCharacter(member.characterId);
+      // Revived allies come back low; only allies who survived the boss take the recovery heal.
       if(member.hp<=0)member.hp=Math.max(1,Math.round(c.stats.maxHp*BALANCE.regionReviveHpPercent));
-      else if(survivorIds.has(member.characterId))member.hp=Math.min(c.stats.maxHp,member.hp+Math.round(c.stats.maxHp*BALANCE.bossRecoveryHpPercent));
+      else member.hp=Math.min(c.stats.maxHp,member.hp+Math.round(c.stats.maxHp*BALANCE.bossRecoveryHpPercent));
       for(const id of c.abilities){
         const a=getAbility(id);const max=a.maxPP+(member.upgradedAbilities.includes(id)?a.upgrade.maxPPDelta??0:0);
         const missing=max-member.abilityPP[id];

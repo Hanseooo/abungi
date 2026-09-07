@@ -75,6 +75,16 @@ test('PP Cache is part of the normal spoils pool', () => {
   assert.ok(ids.has('cash') && ids.has('patch'), 'PP Cache must sit alongside the existing options, not replace them');
 });
 
+test('every normal spoils pair keeps a greed option against a sustain option', () => {
+  const run = createRun(party, 31337);
+  const greed = new Set(['cash', 'scavenge']);
+  for (let seed = 1; seed <= 500; seed += 1) {
+    const ids = generateReward(run, 'normal', new SeededRng(seed), 'normal-fastlane').spoilsChoices.map(c => c.id);
+    assert.ok(ids.some(id => greed.has(id)), `seed ${seed} offered only sustain: ${ids.join(' + ')}`);
+    assert.ok(ids.some(id => !greed.has(id)), `seed ${seed} offered only greed: ${ids.join(' + ')}`);
+  }
+});
+
 test('Jumper Cable tops up each ally at battle start without exceeding max PP', () => {
   assert.equal(getRelic('jumper-cable').mechanicId, 'battle-start-pp');
 

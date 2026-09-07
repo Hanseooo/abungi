@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { Affinity } from '../game/core/types';
 
-/** One accent per rendered figure. Defaults to the affinity token, so only Earl and Hans differ. */
-export function charAccentStyle(source:{affinity:Affinity;accentColor?:string}):CSSProperties {
-  return {'--char-accent': source.accentColor ?? `var(--affinity-${source.affinity})`} as CSSProperties;
+/** One accent per rendered figure: the character's affinity, so a border always reads as its type. */
+export function charAccentStyle(source:{affinity:Affinity}):CSSProperties {
+  return {'--char-accent': `var(--affinity-${source.affinity})`} as CSSProperties;
 }

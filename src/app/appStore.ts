@@ -40,12 +40,12 @@ function payload(run:RunState|null,profile:ProfileState,settings:SettingsState):
 interface AppState{
   booted:boolean;screen:AppScreen;run:RunState|null;profile:ProfileState;settings:SettingsState;overlay:OverlayState;sceneQueue:ResolvedScene[];seenSceneKeys:string[];
   selectedParty:string[];isResolving:boolean;battleEvents:CombatEvent[];battlePulse:number;error:string|null;notice:string|null;
-  saveHealth:SaveHealth;corruptSaveMessage:string|null;eventResult:string|null;online:boolean;
+  saveHealth:SaveHealth;corruptSaveMessage:string|null;eventResult:string|null;
   initialize():Promise<void>;continueRun():void;openNewRun():void;backToTitle():void;toggleParty(id:string):void;confirmParty():Promise<void>;
   selectNode(id:string):Promise<void>;battleSkill(actorId:string,abilityId:string,targetIds:string[]):Promise<void>;battleGuard(actorId:string):Promise<void>;battleItem(actorId:string,itemId:string,targetIds:string[]):Promise<void>;
   claimRewardChoice(relicId?:string,upgrade?:{characterId:string;abilityId:string},spoilsId?:RewardSpoilsChoice['id']):Promise<void>;
   purchaseOffer(offerId:string):Promise<void>;leaveShop():Promise<void>;chooseRest(choice:RestChoice):Promise<void>;chooseEvent(choiceId:string):Promise<void>;finishEvent():void;
-  openSettings():void;openGuide(section?:string):void;openMoveInfo(abilityId:string):void;openStatusInfo(statusId:StatusId):void;openCharacterInfo(characterId:string):void;openItemInfo(itemId:string):void;openEnemyInfo(enemyId:string):void;closeOverlay():void;dismissScene():void;updateSettings(next:Partial<SettingsState>):Promise<void>;clearError():void;resetCorruptSave():Promise<void>;abandonRun():Promise<void>;setOnline(online:boolean):void;
+  openSettings():void;openGuide(section?:string):void;openMoveInfo(abilityId:string):void;openStatusInfo(statusId:StatusId):void;openCharacterInfo(characterId:string):void;openItemInfo(itemId:string):void;openEnemyInfo(enemyId:string):void;closeOverlay():void;dismissScene():void;updateSettings(next:Partial<SettingsState>):Promise<void>;clearError():void;resetCorruptSave():Promise<void>;abandonRun():Promise<void>;
 }
 
 export const useAppStore=create<AppState>((set,get)=>{
@@ -101,7 +101,7 @@ export const useAppStore=create<AppState>((set,get)=>{
   };
 
   return{
-    booted:false,screen:'title',run:null,profile:clone(DEFAULT_PROFILE),settings:clone(DEFAULT_SETTINGS),overlay:null,sceneQueue:[],seenSceneKeys:[],selectedParty:[],isResolving:false,battleEvents:[],battlePulse:0,error:null,notice:null,saveHealth:'loading',corruptSaveMessage:null,eventResult:null,online:navigator.onLine,
+    booted:false,screen:'title',run:null,profile:clone(DEFAULT_PROFILE),settings:clone(DEFAULT_SETTINGS),overlay:null,sceneQueue:[],seenSceneKeys:[],selectedParty:[],isResolving:false,battleEvents:[],battlePulse:0,error:null,notice:null,saveHealth:'loading',corruptSaveMessage:null,eventResult:null,
     async initialize(){const result=await repository.load();if(result.kind==='ok'){set({booted:true,run:result.save.payload.activeRun,profile:result.save.payload.profile,settings:result.save.payload.settings,saveHealth:'ready'});}else if(result.kind==='corrupt'){set({booted:true,saveHealth:'error',corruptSaveMessage:result.message});}else set({booted:true,saveHealth:'ready'});},
     continueRun(){const run=get().run;if(run)set({screen:deriveScreen(run),error:null,notice:null});},
     openNewRun(){set({screen:'party',selectedParty:[],error:null,notice:null});},
@@ -123,7 +123,6 @@ export const useAppStore=create<AppState>((set,get)=>{
     clearError(){set({error:null,notice:null});},
     async resetCorruptSave(){await repository.clear();set({run:null,profile:clone(DEFAULT_PROFILE),settings:clone(DEFAULT_SETTINGS),corruptSaveMessage:null,saveHealth:'ready',screen:'title',overlay:null,sceneQueue:[],seenSceneKeys:[]});},
     async abandonRun(){const run=get().run?{...get().run!,status:'defeat' as const}:null;const profile=run?{...get().profile,bestScore:Math.max(get().profile.bestScore,run.score)}:get().profile;set({run:null,profile,screen:'title',selectedParty:[],notice:'Run abandoned.',overlay:null,sceneQueue:[],seenSceneKeys:[]});await persist(null,profile,get().settings);},
-    setOnline(online){set({online});},
   };
 });
 

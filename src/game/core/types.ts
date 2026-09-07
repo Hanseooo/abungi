@@ -69,7 +69,6 @@ export interface CharacterDefinition {
   passive: PassiveDefinition;
   abilities: string[];
   assetId: string;
-  accentColor?: string;
 }
 
 export interface EnemyMoveDefinition {

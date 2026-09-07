@@ -5,6 +5,7 @@ export interface CombatBeat {
   phase:'announce'|'resolve';
   events:CombatEvent[];
   action?:Extract<CombatEvent,{type:'actionStart'}>;
+  chained?:boolean;
 }
 
 export function buildCombatBeats(events:CombatEvent[]):CombatBeat[]{
@@ -17,10 +18,25 @@ export function buildCombatBeats(events:CombatEvent[]):CombatBeat[]{
       beats.push(current);
       continue;
     }
+    // Every landed blow gets its own beat, so a multi-hit move drains HP one hit at a time.
+    if(event.type==='hit'&&current?.events.some(prior=>prior.type==='damage')){
+      current={phase:'resolve',events:[],action:current.action,chained:true};
+      beats.push(current);
+    }
     if(!current){current={phase:'resolve',events:[]};beats.push(current);}
     current.events.push(event);
   }
   return beats.filter(beat=>beat.phase==='announce'||beat.events.length>0);
+}
+
+/** HP for every unit as of the end of `index`, so the bars drain with the presentation instead of ahead of it. */
+export function hpAtBeat(startHp:Record<string,number>,beats:CombatBeat[],index:number):Record<string,number>{
+  const hp={...startHp};
+  for(let at=0;at<=index&&at<beats.length;at+=1)for(const event of beats[at].events){
+    if(event.type==='damage')hp[event.targetId]=Math.max(0,(hp[event.targetId]??0)-event.amount);
+    else if(event.type==='heal')hp[event.targetId]=(hp[event.targetId]??0)+event.amount;
+  }
+  return hp;
 }
 
 export function combatBeatDuration(beat:CombatBeat,settings:Pick<SettingsState,'animationSpeed'|'reducedMotion'>):number{
@@ -29,9 +45,9 @@ export function combatBeatDuration(beat:CombatBeat,settings:Pick<SettingsState,'
     return settings.reducedMotion?Math.max(70,Math.round(announceBase*.45/settings.animationSpeed)):Math.round(announceBase/settings.animationSpeed);
   }
   if(settings.reducedMotion)return Math.max(90,Math.round(220/settings.animationSpeed));
+  if(beat.chained)return Math.round(215/settings.animationSpeed);
   const impacts=beat.events.filter(event=>['damage','heal','statusApplied','summon','deployableTrigger','revive','bossPhase'].includes(event.type)).length;
-  const multi=beat.events.filter(event=>event.type==='damage').length;
-  return Math.round((410+Math.min(340,impacts*85)+Math.min(180,Math.max(0,multi-1)*60))/settings.animationSpeed);
+  return Math.round((410+Math.min(340,impacts*85))/settings.animationSpeed);
 }
 
 export function combatPresentationDuration(events:CombatEvent[],settings:Pick<SettingsState,'animationSpeed'|'reducedMotion'>):number{

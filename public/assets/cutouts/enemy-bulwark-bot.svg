@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 224 224">
-<defs><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".72" numOctaves="2" seed="8" result="n"/><feBlend in="SourceGraphic" in2="n" mode="multiply"/></filter></defs>
+<defs><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".72" numOctaves="2" seed="8" result="n"/><feBlend in="SourceGraphic" in2="n" mode="multiply" result="b"/><feComposite in="b" in2="SourceGraphic" operator="in"/></filter></defs>
 <g stroke="#1E1A17" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
 <ellipse cx="112" cy="198" rx="73" ry="10" fill="#1E1A1720" stroke="none"/>
 <g fill="#43546A" filter="url(#grain)"><path d="M68 83q44-27 87 0l20 87q-63 27-126 0z"/><path d="M82 55q30-31 60 0l-6 35H88z"/></g>

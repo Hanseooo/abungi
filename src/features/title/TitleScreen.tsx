@@ -19,6 +19,5 @@ export function TitleScreen(){
       </>}
       {notice&&<p className="title-notice">{notice}</p>}
     </section>
-    <footer className="title-footer"><span>OFFLINE AFTER FIRST LOAD</span><span>LOCAL SAVE</span><span>TOUCH + KEYBOARD</span></footer>
   </main>;
 }

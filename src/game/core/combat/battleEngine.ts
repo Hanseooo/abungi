@@ -136,6 +136,7 @@ function targetIdsFor(state:BattleState,actor:BattleUnit,mode:TargetMode,request
   return [];
 }
 
+function awardCoins(state:BattleState,amount:number,events:CombatEvent[]):void { state.availableCoins+=amount; state.coinsDelta+=amount; events.push({type:'coin',amount}); }
 function setHp(unit:BattleUnit,value:number):void { unit.hp=Math.max(0,Math.min(unit.maxHp,Math.round(value))); unit.alive=unit.hp>0; }
 
 function relicAffinityBonus(state:BattleState,actor:BattleUnit,affinity:AbilityDefinition['affinity']):number {
@@ -155,7 +156,7 @@ function damageOne(
   if(target.side==='ally'&&state.relicIds.includes('cardboard-plate')&&!state.flags.cardboardPlateUsed){state.flags.cardboardPlateUsed=true;result={...result,amount:Math.max(1,Math.round(result.amount*0.65))};}
   setHp(target,target.hp-result.amount);
   events.push({type:'hit',targetId:target.id,heavy:power>=100},{type:'damage',targetId:target.id,amount:result.amount,critical:result.critical,affinity:result.affinity});
-  if(result.critical&&actor.side==='ally'&&state.relicIds.includes('lucky-centavo')&&!state.flags.luckyCentavoUsed){state.flags.luckyCentavoUsed=true;state.availableCoins+=5;state.coinsDelta+=5;events.push({type:'coin',amount:5});}
+  if(result.critical&&actor.side==='ally'&&state.relicIds.includes('lucky-centavo')&&!state.flags.luckyCentavoUsed){state.flags.luckyCentavoUsed=true;awardCoins(state,5,events);}
   if(opts?.onHitHealPercent && result.amount>0) {
     const before=actor.hp; setHp(actor,actor.hp+Math.round(result.amount*opts.onHitHealPercent));
     const healed=actor.hp-before; if(healed>0) events.push({type:'heal',targetId:actor.id,amount:healed});
@@ -164,7 +165,7 @@ function damageOne(
   if(killed) {
     events.push({type:'knockout',targetId:target.id});
     if(target.side==='ally'&&state.relicIds.includes('chalk-outline')&&!state.flags.chalkOutlineUsed){
-      state.flags.chalkOutlineUsed=true;state.availableCoins+=15;state.coinsDelta+=15;events.push({type:'coin',amount:15});
+      state.flags.chalkOutlineUsed=true;awardCoins(state,15,events);
     }
   }
   return {hit:true,damage:result.amount,killed,critical:result.critical};
@@ -257,7 +258,7 @@ function resolveEffects(
       const cost=ability?.id==='clearance-sale'&&upgraded(actor,ability)?Math.max(0,effect.amount+(ability.upgrade.coinCostDelta??0)):effect.amount;
       state.availableCoins-=cost;state.coinsDelta-=cost;events.push({type:'coin',amount:-cost});continue;
     }
-    if(effect.kind==='grantCoins') { if(effect.trigger==='always'||context.anyKo){state.availableCoins+=effect.amount;state.coinsDelta+=effect.amount;events.push({type:'coin',amount:effect.amount});} continue; }
+    if(effect.kind==='grantCoins') { if(effect.trigger==='always'||context.anyKo)awardCoins(state,effect.amount,events); continue; }
     if(effect.kind==='summon') {
       const existing=state.deployables.filter(item=>item.ownerId===actor.id);
       if(existing.length>=BALANCE.maxDeployables) continue;
@@ -294,7 +295,7 @@ function resolveEffects(
           const shared=passesSharedMoveAccuracy(actor,target,ability,context,rng,events);if(shared===false)continue;
           const result=damageOne(state,actor,target,power,ability?.affinity ?? actor.affinity,rng,events,{cannotMiss:shared===true||context.cannotMiss,accuracy:shared===undefined?effect.accuracy??ability?.accuracy:undefined,outgoing,onHitHealPercent:drain});
           context.totalDamage+=result.damage;context.anyKo ||= result.killed;
-          if(result.killed && actor.sourceId==='greg'&&!actor.flags.spoilsUsed){actor.flags.spoilsUsed=true;state.availableCoins+=5;state.coinsDelta+=5;events.push({type:'coin',amount:5});}
+          if(result.killed && actor.sourceId==='greg'&&!actor.flags.spoilsUsed){actor.flags.spoilsUsed=true;awardCoins(state,5,events);}
         }
       }
     }

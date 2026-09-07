@@ -31,14 +31,14 @@ Rewards now use the actual enemy composition rather than one universal normal-fi
 
 | Encounter | Configured range | Mean coins | Automatic item drop | Scavenge offered |
 |---|---:|---:|---:|---:|
-| normal-scrap | 13–21 | 17.0 | 11.5% | 16.4% |
-| normal-fastlane | 13–21 | 17.0 | 11.5% | 16.4% |
-| normal-smokes | 22–34 | 28.0 | 11.5% | 16.4% |
-| normal-machines | 16–24 | 20.0 | 11.5% | 16.4% |
-| normal-oddities | 24–37 | 30.5 | 11.5% | 16.4% |
-| normal-support | 14–22 | 18.0 | 11.5% | 16.4% |
+| normal-scrap | 13–21 | 17.0 | 11.5% | 16.3% |
+| normal-fastlane | 13–21 | 17.0 | 11.5% | 16.3% |
+| normal-smokes | 22–34 | 28.0 | 11.5% | 16.3% |
+| normal-machines | 16–24 | 20.0 | 11.5% | 16.3% |
+| normal-oddities | 24–37 | 30.5 | 11.5% | 16.3% |
+| normal-support | 14–22 | 18.0 | 11.5% | 16.3% |
 
-Normal victories additionally offer two small Spoils choices drawn from Cash (+5 coins), Patch Up (5% party Max HP), PP Cache (10% missing party PP), and—when rolled and inventory permits—Scavenge (one common item). This keeps fighting rewarding while forcing a greed-versus-sustain choice rather than refunding all attrition.
+Normal victories additionally offer two small Spoils choices: one greed option (Cash for +5 coins, or Scavenge for one common item when rolled and inventory permits) paired with one sustain option (Patch Up for 5% party Max HP, or PP Cache for 10% missing party PP). Drawing one from each pool keeps fighting rewarding while forcing a greed-versus-sustain choice rather than refunding all attrition.
 
 ## Shop distribution
 

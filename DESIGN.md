@@ -25,6 +25,15 @@ Abungi is a game surface, not an application dashboard. The visual language is a
 
 Affinity never relies on color alone: every affinity includes a letter mark and text label.
 
+Affinity swatches derive from the tokens above and are exposed as `--affinity-might` `#D87C68`,
+`--affinity-tech` `#75A1AA`, `--affinity-trick` `#D5B24C`, `--affinity-mystic` `#9B78A7`,
+`--affinity-neutral` `#AAA397`.
+
+Character surfaces (roster card, unit label, turn flag, actor ticket) read one accent through
+`--char-accent`, which defaults to the character's affinity swatch. Only two characters override
+it: Earl `#C77B94` (dusty theatre pink) and Hans `#7A2E2E` (maroon). The override is a single
+accent detail per surface, never the affinity mark or label.
+
 ## Typography
 
 Use robust system-local condensed/display fallbacks for large game labels and a system sans stack for readable copy. No font CDN is allowed. If approved redistributable font files are added later, keep them local under `public/assets/fonts/` and preserve these fallback stacks.

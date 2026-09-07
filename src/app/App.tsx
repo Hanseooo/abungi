@@ -71,18 +71,12 @@ function PwaUpdateNotice() {
 
 function GlobalLifecycle() {
   const initialize = useAppStore(state => state.initialize);
-  const setOnline = useAppStore(state => state.setOnline);
   const settings = useAppStore(state => state.settings);
   const screen = useAppStore(state => state.screen);
   const run = useAppStore(state => state.run);
   const error = useAppStore(state => state.error);
 
   useEffect(() => { void initialize(); }, [initialize]);
-  useEffect(() => {
-    const sync = () => setOnline(navigator.onLine);
-    addEventListener('online', sync); addEventListener('offline', sync);
-    return () => { removeEventListener('online', sync); removeEventListener('offline', sync); };
-  }, [setOnline]);
   useEffect(() => { audioEngine.configure(settings); }, [settings]);
   useEffect(() => {
     const unlock = () => { audioEngine.unlock(); document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); };
