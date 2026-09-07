@@ -14,7 +14,7 @@ export function TitleScreen(){
       {corrupt&&<div className="recovery-notice" role="alert"><strong>Your local save needs repair.</strong><p>{corrupt}</p><PaperButton variant="danger" onClick={()=>void reset()}>RESET LOCAL SAVE</PaperButton></div>}
       {!corrupt&&<>
         {hasRun&&<PaperButton variant="ink" onClick={cont}>CONTINUE RUN <small>Region {run!.regionIndex+1}</small></PaperButton>}
-        {!confirm?<PaperButton onClick={()=>hasRun?setConfirm(true):openNew()}>{hasRun?'NEW RUN':'START NEW RUN'}</PaperButton>:<div className="confirm-strip"><p>Starting over replaces the active run only after you choose a new party.</p><div><PaperButton onClick={()=>{setConfirm(false);openNew();}}>CHOOSE NEW PARTY</PaperButton><PaperButton variant="quiet" onClick={()=>setConfirm(false)}>KEEP CURRENT RUN</PaperButton></div></div>}
+        {!confirm?<PaperButton className="title-cta" onClick={()=>hasRun?setConfirm(true):openNew()}>{hasRun?'NEW RUN':'START NEW RUN'}</PaperButton>:<div className="confirm-strip"><p>Starting over replaces the active run only after you choose a new party.</p><div><PaperButton className="title-cta" onClick={()=>{setConfirm(false);openNew();}}>CHOOSE NEW PARTY</PaperButton><PaperButton variant="quiet" onClick={()=>setConfirm(false)}>KEEP CURRENT RUN</PaperButton></div></div>}
         <div className="title-secondary-actions"><PaperButton variant="quiet" onClick={()=>guide()}>FIELD GUIDE</PaperButton><PaperButton variant="quiet" onClick={settings}>SETTINGS</PaperButton></div>
       </>}
       {notice&&<p className="title-notice">{notice}</p>}

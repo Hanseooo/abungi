@@ -73,3 +73,14 @@ test('the skill description collapses to a clamp rather than vanishing', () => {
   const block = shortScreenBlock(read('src/styles.css')) ?? '';
   assert.match(block, /\.skill-main > small \{[^}]*-webkit-line-clamp:\s*2/s);
 });
+
+test('the primary title CTA sets an explicit mustard/ink pair without touching .paper-button', () => {
+  const css = read('src/styles.css');
+  const title = read('src/features/title/TitleScreen.tsx');
+  assert.match(title, /className="title-cta"/, 'the START NEW RUN button must carry the title-cta class');
+  const block = css.match(/\.paper-button\.title-cta \{[^}]*\}/s)?.[0] ?? '';
+  assert.match(block, /background:\s*var\(--mustard\)/);
+  assert.match(block, /color:\s*var\(--ink\)/);
+  const base = css.match(/\n\.paper-button \{[^}]*\}/s)?.[0] ?? '';
+  assert.doesNotMatch(base, /color:/, '.paper-button must stay colour-neutral for the other screens');
+});

@@ -54,6 +54,8 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 .paper-button-ink { background: var(--ink); color: var(--paper); box-shadow: 3px 4px 0 var(--mustard); }
 .paper-button-danger { background: var(--red); color: #fff8ec; }
 .paper-button-quiet { background: transparent; box-shadow: none; border-style: dashed; }
+.paper-button.title-cta { background: var(--mustard); color: var(--ink); box-shadow: 3px 4px 0 var(--ink); }
+.paper-button.title-cta::after { border-color: rgba(30,26,23,.4); }
 .paper-button small { display: block; font-family: inherit; font-weight: 700; opacity: .7; margin-top: 2px; }
 
 .game-header { max-width: 1200px; margin: 0 auto 18px; display: grid; gap: 14px; grid-template-columns: 1fr; border-bottom: 3px solid var(--ink); padding-bottom: 14px; }
