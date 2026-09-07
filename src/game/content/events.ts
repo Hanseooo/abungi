@@ -8,7 +8,7 @@ export type EventEffect =
   | {kind:'wagerCoins'; cost:number; winChance:number; payout:number};
 
 export interface EventChoice { id:string; label:string; hint:string; resultText:string; effects:EventEffect[] }
-export interface EventDefinition { id:string; title:string; text:string; theme:'rain'|'crate'|'shrine'|'food'|'alley'|'locker'|'game'|'repair'|'quiet'; choices:EventChoice[] }
+export interface EventDefinition { id:string; title:string; text:string; theme:'rain'|'crate'|'shrine'|'food'|'alley'|'locker'|'game'|'repair'|'quiet'|'market'|'danger'; choices:EventChoice[] }
 
 export const EVENTS: EventDefinition[] = [
   {id:'rain-stall',title:'Rain on the Stall',theme:'rain',text:'A tarp snaps in the wind while a vendor waves you under.',choices:[
@@ -46,6 +46,14 @@ export const EVENTS: EventDefinition[] = [
   {id:'quiet-corner',title:'Quiet Corner',theme:'quiet',text:'For once, nobody is asking anything from you.',choices:[
     {id:'breathe',label:'Take five',hint:'Restore 8% Max HP and 8% of missing PP.',resultText:'The party recovers a little.',effects:[{kind:'partyHpPercent',amount:0.08},{kind:'restoreMissingPpPercent',amount:0.08}]},
     {id:'move',label:'Keep momentum',hint:'Gain 9 coins.',resultText:'You find a few dropped coins on the way out.',effects:[{kind:'coins',amount:9}]}
+  ]},
+  {id:'bulk-deal',title:'Bulk Deal',theme:'market',text:'A stallholder is packing up early and wants the shelf empty before dark.',choices:[
+    {id:'buy',label:'Pay 20 coins for the crate',hint:'Spend 20 coins · gain 1 Field Ration and 1 PP Tonic if your pack has room.',resultText:'Two useful things and one hurried handshake.',effects:[{kind:'coins',amount:-20},{kind:'item',itemId:'field-ration'},{kind:'item',itemId:'pp-tonic'}]},
+    {id:'help',label:'Help him pack instead',hint:'Gain 14 coins · no items.',resultText:'He pays you for the hour rather than the crate.',effects:[{kind:'coins',amount:14}]}
+  ]},
+  {id:'live-wire',title:'Live Wire',theme:'danger',text:'A cable hangs low across the path, still humming.',choices:[
+    {id:'reroute',label:'Reroute it by hand',hint:'Lose 9% Max HP from each living ally · restore 30% of missing PP across the party.',resultText:'Everything charges. So do your hands.',effects:[{kind:'partyHpPercent',amount:-0.09},{kind:'restoreMissingPpPercent',amount:0.30}]},
+    {id:'around',label:'Go the long way',hint:'Gain 7 coins · no risk.',resultText:'The detour passes a dropped purse.',effects:[{kind:'coins',amount:7}]}
   ]},
 ];
 

@@ -854,6 +854,10 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 .scene-theme-repair .scene-layer.layer-mid { background: repeating-linear-gradient(0deg,rgba(89,135,130,.38) 0 5px,transparent 5px 32px); }
 .scene-theme-quiet { background: linear-gradient(180deg,#66706a 0 45%,#685b48 45% 61%,#211b16 61%)!important; }
 .scene-theme-quiet .scene-curtain { opacity:.55; }
+.scene-theme-market { background: linear-gradient(180deg,#5d6b58 0 42%,#7d6444 42% 63%,#211b16 63%)!important; }
+.scene-theme-market .scene-layer.layer-mid { background: repeating-linear-gradient(90deg,#8d7048 0 54px,#5f4b31 54px 58px); }
+.scene-theme-danger { background: radial-gradient(circle at 50% 30%,#7a4a3c 0 9%,#3a2620 50%,#181110 76%)!important; }
+.scene-theme-danger .scene-layer.layer-mid { background: repeating-linear-gradient(72deg,transparent 0 22px,rgba(233,196,120,.28) 23px 26px,transparent 27px 44px); }
 
 
 @media (min-width: 768px) {
