@@ -216,7 +216,7 @@ export interface RunState {
   status: 'active' | 'victory' | 'defeat';
 }
 
-export interface RewardSpoilsChoice { id:'cash'|'patch'|'scavenge'; label:string; description:string; coinBonus?:number; healPercent?:number; itemId?:string }
+export interface RewardSpoilsChoice { id:'cash'|'patch'|'scavenge'|'ppcache'; label:string; description:string; coinBonus?:number; healPercent?:number; itemId?:string; ppPercent?:number }
 
 export interface RewardState {
   tier: EncounterTier;

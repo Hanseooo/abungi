@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { SeededRng } from '../../.domain-build/core/rng/seededRng.js';
 import { createBattle, resolveBattleCommand } from '../../.domain-build/core/combat/battleEngine.js';
 import { getItem } from '../../.domain-build/content/items.js';
+import { createRun } from '../../.domain-build/core/progression/run.js';
+import { generateReward, claimReward } from '../../.domain-build/core/progression/rewards.js';
 
 const party = ['earl', 'hans', 'leandre'];
 const startBattle = (options = {}) => createBattle(party, 'normal-fastlane', new SeededRng(777), { coins: 30, ...options });
@@ -47,4 +49,26 @@ test('Brick in a Sock damages one enemy at neutral affinity, so anyone can throw
   const damage = events.find(event => event.type === 'damage' && event.targetId === targetId);
   assert.ok(damage, 'no damage event was emitted');
   assert.equal(damage.affinity, 'normal', 'a thrown object must never take an affinity multiplier');
+});
+
+test('PP Cache restores a slice of missing party PP when claimed', () => {
+  const run = createRun(party, 31337);
+  run.party[0].abilityPP['knuckle-up'] = 2;
+
+  const reward = {
+    tier: 'normal', coins: 0, relicChoices: [], upgradeChoices: [],
+    spoilsChoices: [{ id: 'ppcache', label: 'PP Cache', description: 'Restore 10% of missing PP across the party.', ppPercent: 0.10 }],
+  };
+  const next = claimReward(run, reward, { spoilsId: 'ppcache' });
+  assert.equal(next.party[0].abilityPP['knuckle-up'], 4);
+});
+
+test('PP Cache is part of the normal spoils pool', () => {
+  const run = createRun(party, 31337);
+  const ids = new Set();
+  for (let seed = 1; seed <= 200; seed += 1) {
+    for (const choice of generateReward(run, 'normal', new SeededRng(seed), 'normal-fastlane').spoilsChoices) ids.add(choice.id);
+  }
+  assert.ok(ids.has('ppcache'), 'PP Cache never appeared in 200 seeded normal rewards');
+  assert.ok(ids.has('cash') && ids.has('patch'), 'PP Cache must sit alongside the existing options, not replace them');
 });

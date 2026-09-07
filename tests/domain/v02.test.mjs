@@ -123,7 +123,7 @@ test('normal fights offer a small strategic spoils choice instead of only automa
   const reward=generateReward(run,'normal',new SeededRng(9),'normal-smokes');
   assert.equal(reward.spoilsChoices.length,2);
   assert.equal(new Set(reward.spoilsChoices.map(choice=>choice.id)).size,2);
-  assert.ok(reward.spoilsChoices.every(choice=>['cash','patch','scavenge'].includes(choice.id)));
+  assert.ok(reward.spoilsChoices.every(choice=>['cash','patch','scavenge','ppcache'].includes(choice.id)));
 });
 
 test('tactical items emit choreography that matches their visible effect family',()=>{

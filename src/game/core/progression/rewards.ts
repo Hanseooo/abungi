@@ -31,6 +31,7 @@ function normalSpoils(run:RunState,rng:SeededRng):RewardSpoilsChoice[]{
   const choices:RewardSpoilsChoice[]=[
     {id:'cash',label:'Take the Cash',description:'Pocket 5 additional coins.',coinBonus:5},
     {id:'patch',label:'Patch Up',description:'Restore 5% Max HP to each living party member.',healPercent:0.05},
+    {id:'ppcache',label:'PP Cache',description:'Restore 10% of missing PP across the party.',ppPercent:0.10},
   ];
   const hasSpace=run.inventory.reduce((sum,entry)=>sum+entry.quantity,0)<BALANCE.inventoryCapacity;
   if(hasSpace&&rng.chance(0.35)){
@@ -76,6 +77,7 @@ export function claimReward(input:RunState,reward:RewardState,choice:{relicId?:s
     if(selected?.coinBonus)run.coins+=selected.coinBonus;
     if(selected?.healPercent){for(const member of run.party){if(member.hp<=0)continue;const c=getCharacter(member.characterId);member.hp=Math.min(c.stats.maxHp,member.hp+Math.round(c.stats.maxHp*selected.healPercent));}}
     if(selected?.itemId){const total=run.inventory.reduce((sum,entry)=>sum+entry.quantity,0);if(total<BALANCE.inventoryCapacity){const entry=run.inventory.find(item=>item.itemId===selected.itemId);if(entry)entry.quantity+=1;else run.inventory.push({itemId:selected.itemId,quantity:1});}}
+    if(selected?.ppPercent){for(const member of run.party){const c=getCharacter(member.characterId);for(const id of c.abilities){const a=getAbility(id);const max=a.maxPP+(member.upgradedAbilities.includes(id)?a.upgrade.maxPPDelta??0:0);const missing=Math.max(0,max-member.abilityPP[id]);member.abilityPP[id]=Math.min(max,member.abilityPP[id]+Math.round(missing*selected.ppPercent*(run.relicIds.includes('blue-tonic-cap')?1.25:1)));}}}
   }
 
   if(reward.tier==='elite'&&run.relicIds.includes('elite-bandage')){
