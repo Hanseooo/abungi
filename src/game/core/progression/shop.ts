@@ -1,11 +1,11 @@
-import type { RunState } from '../types.js';
-import { ITEMS, type ItemDefinition, type ItemRarity } from '../../content/items.js';
+import type { RunState, ShopOffer } from '../types.js';
+import { ITEMS, type ItemDefinition } from '../../content/items.js';
 import { RELICS } from '../../content/relics.js';
 import { BALANCE } from '../../balance/constants.js';
 import { SHOP_CONFIG } from '../../content/shops.js';
 import { SeededRng } from '../rng/seededRng.js';
 
-export interface ShopOffer {id:string;kind:'item'|'relic';contentId:string;name:string;description:string;price:number;rarity:ItemRarity|'relic';deal:'good'|'standard'|'pricey'}
+export type { ShopOffer };
 export interface PurchaseResult {ok:boolean;reason?:string;run:RunState}
 const clone=<T>(value:T):T=>JSON.parse(JSON.stringify(value)) as T;
 
@@ -49,7 +49,7 @@ export function generateShopOffers(run:RunState,nodeId:string):ShopOffer[]{
   const regionRelicChance=Math.min(0.34,SHOP_CONFIG.relicChance+run.regionIndex*0.05);
   if(offers.length<count&&relicPool.length&&rng.chance(regionRelicChance)){
     const relic=relicPool.splice(rng.int(0,relicPool.length-1),1)[0];const variance=priceFactor(rng);
-    offers.push({id:`${nodeId}-relic-${relic.id}`,kind:'relic',contentId:relic.id,name:relic.name,description:relic.description,price:Math.round(50*discounted*variance),rarity:'relic',deal:dealFor(variance)});
+    offers.push({id:`${nodeId}-relic-${relic.id}`,kind:'relic',contentId:relic.id,name:relic.name,description:relic.description,price:Math.round(50*discounted*variance),rarity:relic.rarity,deal:dealFor(variance)});
   } else if(offers.length<count) pushItem(()=>true);
 
   while(offers.length<count)pushItem(()=>true);

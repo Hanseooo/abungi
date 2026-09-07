@@ -1,3 +1,5 @@
+import type { ItemRarity } from '../content/items.js';
+
 export type Affinity = 'might' | 'tech' | 'trick' | 'mystic' | 'neutral';
 export type StatusId = 'strength' | 'weaken' | 'haste' | 'slow' | 'blind' | 'fortified' | 'exposed';
 export type Side = 'ally' | 'enemy';
@@ -213,6 +215,8 @@ export interface RunState {
   pendingReward: RewardState | null;
   score: number;
   status: 'active' | 'victory' | 'defeat';
+  fieldUsesSpent: number | null;
+  shopVisit: ShopVisit | null;
 }
 
 export interface RewardSpoilsChoice { id:'cash'|'patch'|'scavenge'|'ppcache'; label:string; description:string; coinBonus?:number; healPercent?:number; itemId?:string; ppPercent?:number }
@@ -243,4 +247,21 @@ export interface SettingsState {
   sfxVolume: number;
   animationSpeed: 1 | 2 | 3;
   reducedMotion: boolean;
+}
+
+export interface ShopOffer {
+  id: string;
+  kind: 'item' | 'relic';
+  contentId: string;
+  name: string;
+  description: string;
+  price: number;
+  rarity: ItemRarity;
+  deal: 'good' | 'standard' | 'pricey';
+}
+
+export interface ShopVisit {
+  nodeId: string;
+  offers: ShopOffer[];
+  purchasedOfferIds: string[];
 }

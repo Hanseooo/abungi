@@ -92,3 +92,14 @@ test('normal rewards do not advertise an item when inventory is already full',()
   const reward=generateReward(run,'normal',new SeededRng(1));
   assert.equal(reward.itemId,undefined);
 });
+
+test('completion opens one interval without replaying score',()=>{
+  const run=createRun(['earl','hans','leandre'],2345);
+  assert.equal(run.fieldUsesSpent,null);
+  const nodeId=run.route.startNodeIds[0];
+  const completed=completeRouteNode(run,nodeId);
+  assert.equal(completed.fieldUsesSpent,0);
+  completed.fieldUsesSpent=1;
+  assert.deepEqual(completeRouteNode(completed,nodeId),completed);
+  assert.equal(advanceRegion(completed).fieldUsesSpent,1);
+});

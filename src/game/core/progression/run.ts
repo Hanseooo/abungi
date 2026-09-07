@@ -30,13 +30,17 @@ export function createRun(partyIds:string[], seed:number):RunState {
     pendingReward:null,
     score:0,
     status:'active',
+    fieldUsesSpent:null,
+    shopVisit:null,
   };
 }
 
 export function completeRouteNode(input:RunState,nodeId:string):RunState {
+  if(!input.route.nodes.some(n=>n.id===nodeId)) throw new Error(`Unknown route node: ${nodeId}`);
+  if(input.completedNodeIds.includes(nodeId)) return clone(input);
   const run=clone(input);
-  if(!run.route.nodes.some(n=>n.id===nodeId)) throw new Error(`Unknown route node: ${nodeId}`);
-  if(!run.completedNodeIds.includes(nodeId)) run.completedNodeIds.push(nodeId);
+  run.completedNodeIds.push(nodeId);
+  run.fieldUsesSpent=0;
   run.currentNodeId=nodeId;
   run.activeBattle=null;
   run.score+=10;
