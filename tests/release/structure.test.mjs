@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = new URL('../../', import.meta.url);
-const path = (...parts) => join(root.pathname, ...parts);
+const path = (...parts) => join(fileURLToPath(root), ...parts);
 const read = (...parts) => readFileSync(path(...parts), 'utf8');
 
 const requiredFiles = [

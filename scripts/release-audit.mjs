@@ -1,7 +1,8 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = new URL('../', import.meta.url).pathname;
+const root = fileURLToPath(new URL('../', import.meta.url));
 const failures = [];
 const ok = message => console.log(`OK   ${message}`);
 const fail = message => { failures.push(message); console.error(`FAIL ${message}`); };
