@@ -31,14 +31,14 @@ Rewards now use the actual enemy composition rather than one universal normal-fi
 
 | Encounter | Configured range | Mean coins | Automatic item drop | Scavenge offered |
 |---|---:|---:|---:|---:|
-| normal-scrap | 13–21 | 17.0 | 11.5% | 21.8% |
-| normal-fastlane | 13–21 | 17.0 | 11.5% | 21.8% |
-| normal-smokes | 22–34 | 28.0 | 11.5% | 21.8% |
-| normal-machines | 16–24 | 20.0 | 11.5% | 21.8% |
-| normal-oddities | 24–37 | 30.5 | 11.5% | 21.8% |
-| normal-support | 14–22 | 18.0 | 11.5% | 21.8% |
+| normal-scrap | 13–21 | 17.0 | 11.5% | 16.4% |
+| normal-fastlane | 13–21 | 17.0 | 11.5% | 16.4% |
+| normal-smokes | 22–34 | 28.0 | 11.5% | 16.4% |
+| normal-machines | 16–24 | 20.0 | 11.5% | 16.4% |
+| normal-oddities | 24–37 | 30.5 | 11.5% | 16.4% |
+| normal-support | 14–22 | 18.0 | 11.5% | 16.4% |
 
-Normal victories additionally offer two small Spoils choices drawn from Cash (+5 coins), Patch Up (5% party Max HP), and—when rolled and inventory permits—Scavenge (one common item). This keeps fighting rewarding while forcing a greed-versus-sustain choice rather than refunding all attrition.
+Normal victories additionally offer two small Spoils choices drawn from Cash (+5 coins), Patch Up (5% party Max HP), PP Cache (10% missing party PP), and—when rolled and inventory permits—Scavenge (one common item). This keeps fighting rewarding while forcing a greed-versus-sustain choice rather than refunding all attrition.
 
 ## Shop distribution
 
@@ -46,8 +46,8 @@ Each group below samples 3,000 shops across all three regions. Duplicate content
 
 | Party | Avg offers | Common | Uncommon | Rare item | Relic | Avg price | Duplicate shelves |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Without Leandre | 4.0 | 50.9% | 43.1% | 0.4% | 5.5% | 20.1 | 0 |
-| With Leandre | 5.0 | 46.8% | 47.9% | 0.9% | 4.4% | 20.0 | 0 |
+| Without Leandre | 4.0 | 52.6% | 41.6% | 0.3% | 5.5% | 21.3 | 0 |
+| With Leandre | 5.0 | 49.9% | 45.0% | 0.6% | 4.4% | 21.2 | 0 |
 
 Leandre's fifth shelf is therefore real run-level utility rather than a combat-stat bonus. Rare Revive Kits remain possible but uncommon enough that a player cannot route around attrition assuming one will appear.
 
@@ -64,6 +64,8 @@ Leandre's fifth shelf is therefore real run-level utility rather than a combat-s
 | Three Cups | 5-coin wager: 50% wins 10 coins after paying the wager, 50% loses 5. Expected net is neutral; outcome is seeded and cannot be reload-rerolled. |
 | Repair Bench | 25% missing-PP restoration versus Energy Drink if pack capacity allows. |
 | Quiet Corner | Small HP+PP sustain versus 9 coins. |
+| Bulk Deal | 20 coins for two consumables versus 14 coins for none; the paid branch is disabled when coins are short or the pack is full. |
+| Live Wire | 9% party HP for 30% missing-PP restoration versus a risk-free 7 coins. The HP cost cannot kill; it floors at 1. |
 
 ## Assessment
 

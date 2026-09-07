@@ -55,7 +55,7 @@ The project uses **Clean Architecture Lite**:
 
 - `src/game/core/` — pure deterministic rules: combat, RNG, progression, save format.
 - `src/game/balance/` — frequently tuned multipliers and limits.
-- `src/game/content/` — data-driven characters, 44 abilities, enemies, encounters, items, relics, events, shop copy.
+- `src/game/content/` — data-driven characters, 44 abilities, 16 enemies, encounters, 11 items, 16 relics, 11 events, shop copy.
 - `src/app/` — Zustand application coordination and autosave boundaries.
 - `src/features/` — the ten required screens.
 - `src/services/save/` — `SaveRepository` port + IndexedDB/Zod adapter.
