@@ -15,7 +15,7 @@ export const BALANCE = {
     fortifiedDamageMultiplier: 0.7,
     exposedDamageMultiplier: 1.2,
   },
-  enemyTierHpMultiplier: { normal: 1.85, elite: 1.45, boss: 1.55 },
+  enemyTierHpMultiplier: { normal: 1.85, elite: 1.45, boss: 1.45 },
   regionEnemyHpMultiplier: [1, 1.08, 1.16],
   regionEnemyPowerMultiplier: [1, 1.05, 1.10],
   inventoryCapacity: 6,

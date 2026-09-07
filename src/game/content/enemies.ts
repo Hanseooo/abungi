@@ -69,13 +69,13 @@ export const ENEMIES: EnemyDefinition[] = [
   enemy({ id:'night-maw', displayName:'Night Maw', affinity:'mystic', tier:'elite', stats:{maxHp:250,power:116,guard:82,speed:90}, assetId:'elite-night-maw', aiProfile:'aggressive', rewardCoins:[23,31], moves:[
     move({id:'maw-bite',name:'Maw Bite',affinity:'mystic',target:'enemy-one',effects:[{kind:'damage',power:82,target:'enemy-one'}],weight:5,condition:'always'}),
     move({id:'hollow-drain',name:'Hollow Drain',affinity:'mystic',target:'enemy-one',effects:[{kind:'damage',power:70,target:'enemy-one',mechanicId:'enemy-life-drain'}],weight:4,condition:'self-below-half'}),
-    move({id:'night-swell',name:'Night Swell',affinity:'mystic',target:'enemy-all',effects:[{kind:'damage',power:50,target:'enemy-all'}],weight:2,cooldown:2,condition:'always',signature:true})
+    move({id:'night-swell',name:'Night Swell',affinity:'mystic',target:'enemy-all',effects:[{kind:'damage',power:45,target:'enemy-all'}],weight:2,cooldown:2,condition:'always',signature:true})
   ]}),
 
   enemy({ id:'jonlow', displayName:'Jonlow, the Glutton', affinity:'might', tier:'boss', stats:{maxHp:430,power:108,guard:96,speed:72}, assetId:'boss-jonlow', aiProfile:'boss-jonlow', rewardCoins:[38,48], moves:[
     move({id:'greedy-swipe',name:'Greedy Swipe',affinity:'might',target:'enemy-one',effects:[{kind:'damage',power:76,target:'enemy-one'}],weight:5,condition:'always'}),
     move({id:'stuff-face',name:'Stuff Face',affinity:'neutral',target:'self',effects:[{kind:'heal',target:'self',percentMaxHp:0.09},{kind:'status',target:'self',statusId:'strength',duration:2}],weight:3,cooldown:2,condition:'always'}),
-    move({id:'table-flip',name:'Table Flip',affinity:'might',target:'enemy-all',effects:[{kind:'damage',power:58,target:'enemy-all'}],weight:2,cooldown:2,condition:'self-below-half',signature:true})
+    move({id:'table-flip',name:'Table Flip',affinity:'might',target:'enemy-all',effects:[{kind:'damage',power:52,target:'enemy-all'}],weight:2,cooldown:2,condition:'self-below-half',signature:true})
   ]}),
   enemy({ id:'klyde', displayName:'Klyde, the Psycho', affinity:'trick', tier:'boss', stats:{maxHp:400,power:116,guard:82,speed:108}, assetId:'boss-klyde', aiProfile:'boss-klyde', rewardCoins:[40,50], moves:[
     move({id:'wild-cut',name:'Wild Cut',affinity:'trick',target:'enemy-one',effects:[{kind:'damage',power:72,target:'enemy-one'}],weight:5,condition:'always'}),
@@ -87,7 +87,7 @@ export const ENEMIES: EnemyDefinition[] = [
     move({id:'discipline-shot',name:'Discipline Shot',affinity:'tech',target:'enemy-one',effects:[{kind:'damage',power:78,target:'enemy-one'}],weight:5,condition:'always'}),
     move({id:'containment',name:'Containment',affinity:'tech',target:'enemy-all',effects:[{kind:'status',target:'enemy-all',statusId:'slow',duration:2}],weight:3,condition:'always'}),
     move({id:'barrier-protocol',name:'Barrier Protocol',affinity:'neutral',target:'self',effects:[{kind:'status',target:'self',statusId:'fortified',duration:2}],weight:3,condition:'always'}),
-    move({id:'enforcement-burst',name:'Enforcement Burst',affinity:'tech',target:'enemy-all',effects:[{kind:'damage',power:60,target:'enemy-all'}],weight:3,cooldown:2,condition:'self-below-35',signature:true})
+    move({id:'enforcement-burst',name:'Enforcement Burst',affinity:'tech',target:'enemy-all',effects:[{kind:'damage',power:54,target:'enemy-all'}],weight:3,cooldown:2,condition:'self-below-35',signature:true})
   ]}),
 ];
 
