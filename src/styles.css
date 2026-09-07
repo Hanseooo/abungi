@@ -340,6 +340,8 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 
 .battle-screen.speed-2x { --anim-scale: .5; --dur-pop: 260ms; --dur-attack: 195ms; --dur-hit: 165ms; --dur-heal: 215ms; --dur-scan: 275ms; --dur-shake: 105ms; }
 .battle-screen.speed-3x { --anim-scale: .333; --dur-pop: 173ms; --dur-attack: 130ms; --dur-hit: 110ms; --dur-heal: 143ms; --dur-scan: 183ms; --dur-shake: 70ms; }
+.reward-screen.speed-2x { --anim-scale: .5; }
+.reward-screen.speed-3x { --anim-scale: .333; }
 .battle-screen.reduced-motion .unit-cutout-wrap.is-acting,
 .battle-screen.reduced-motion .unit-cutout-wrap.is-hit,
 .battle-screen.reduced-motion .unit-cutout-wrap.is-healed,

@@ -145,3 +145,11 @@ test('the boss signature flourish is driven by a committed action, never by inte
   assert.match(battle, /action\?\.signature|action\.signature/, 'the flourish reads the actionStart event');
   assert.doesNotMatch(battle, /nextMove|predictedTarget|predictedDamage|targetForecast/i, 'enemy predictions must stay hidden');
 });
+
+test('the reward coin pop inherits the saved 1x/2x/3x speed setting', () => {
+  const reward = read('src/features/reward/RewardScreen.tsx');
+  const css = read('src/styles.css');
+  assert.match(reward, /speed-\$\{settings\.animationSpeed\}x/, 'the reward screen must expose the saved speed setting');
+  assert.match(css, /\.reward-screen\.speed-2x\s*\{[^}]*--anim-scale:\s*\.5/s);
+  assert.match(css, /\.reward-screen\.speed-3x\s*\{[^}]*--anim-scale:\s*\.333/s);
+});
