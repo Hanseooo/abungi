@@ -98,6 +98,14 @@ export function createBattle(
   state.flags.regionIndex=regionIndex;
   if(rolledBossAffinity)state.flags.bossAffinity=rolledBossAffinity;
   if(state.relicIds.includes('bike-bearing')) for(const id of allies) units[id].speed=Math.round(units[id].speed*1.10);
+  if(state.relicIds.includes('jumper-cable')) for(const id of allies) {
+    const unit=units[id]; if(!unit.abilityPP) continue;
+    const lowest=Object.keys(unit.abilityPP).sort((a,b)=>unit.abilityPP![a]-unit.abilityPP![b])[0];
+    if(!lowest) continue;
+    const ability=getAbility(lowest);
+    const max=ability.maxPP+(unit.upgradedAbilities?.includes(lowest)?ability.upgrade.maxPPDelta??0:0);
+    unit.abilityPP[lowest]=Math.min(max,unit.abilityPP[lowest]+2);
+  }
   state.turnOrder=calculateTurnOrder(state);
   // Advance through any opening enemy turns so callers always receive an actionable player state when possible.
   return advanceAutomaticTurns(state,rng,[]).nextState;
@@ -153,7 +161,12 @@ function damageOne(
     const healed=actor.hp-before; if(healed>0) events.push({type:'heal',targetId:actor.id,amount:healed});
   }
   const killed=wasAlive&&!target.alive;
-  if(killed) events.push({type:'knockout',targetId:target.id});
+  if(killed) {
+    events.push({type:'knockout',targetId:target.id});
+    if(target.side==='ally'&&state.relicIds.includes('chalk-outline')&&!state.flags.chalkOutlineUsed){
+      state.flags.chalkOutlineUsed=true;state.availableCoins+=15;state.coinsDelta+=15;events.push({type:'coin',amount:15});
+    }
+  }
   return {hit:true,damage:result.amount,killed,critical:result.critical};
 }
 

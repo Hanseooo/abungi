@@ -21,6 +21,8 @@ export const RELICS: RelicDefinition[] = [
   {id:'lucky-centavo',name:'Lucky Token',description:'The first critical hit each battle grants 5 coins.',mechanicId:'first-crit-coins',value:5},
   {id:'blue-tonic-cap',name:'Blue Tonic Cap',description:'PP restoration effects are 25% stronger.',mechanicId:'pp-restore',value:0.25},
   {id:'pressed-flower',name:'Pressed Flower',description:'Healing received is 8% stronger.',mechanicId:'healing-received',value:0.08},
+  {id:'jumper-cable',name:'Jumper Cable',description:'Each ally starts every battle with 2 extra PP on their lowest-PP move.',mechanicId:'battle-start-pp',value:2},
+  {id:'chalk-outline',name:'Chalk Outline',description:'The first ally knocked out each battle leaves 15 coins behind.',mechanicId:'ko-coins',value:15},
 ];
 
 const map = new Map(RELICS.map(item => [item.id,item]));

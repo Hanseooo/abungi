@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { SeededRng } from '../../.domain-build/core/rng/seededRng.js';
 import { createBattle, resolveBattleCommand } from '../../.domain-build/core/combat/battleEngine.js';
 import { getItem } from '../../.domain-build/content/items.js';
+import { getRelic } from '../../.domain-build/content/relics.js';
 import { createRun } from '../../.domain-build/core/progression/run.js';
 import { generateReward, claimReward } from '../../.domain-build/core/progression/rewards.js';
 
@@ -71,4 +72,47 @@ test('PP Cache is part of the normal spoils pool', () => {
   }
   assert.ok(ids.has('ppcache'), 'PP Cache never appeared in 200 seeded normal rewards');
   assert.ok(ids.has('cash') && ids.has('patch'), 'PP Cache must sit alongside the existing options, not replace them');
+});
+
+test('Jumper Cable tops up each ally at battle start without exceeding max PP', () => {
+  assert.equal(getRelic('jumper-cable').mechanicId, 'battle-start-pp');
+
+  const persisted = createRun(party, 55).party.map(member => ({ ...member, abilityPP: { ...member.abilityPP } }));
+  for (const member of persisted) for (const id of Object.keys(member.abilityPP)) member.abilityPP[id] -= 5;
+
+  const plain = createBattle(party, 'normal-fastlane', new SeededRng(55), { coins: 0, party: persisted });
+  const withRelic = createBattle(party, 'normal-fastlane', new SeededRng(55), { coins: 0, party: persisted, relicIds: ['jumper-cable'] });
+
+  const total = battle => battle.allies.reduce((sum, id) => sum + Object.values(battle.units[id].abilityPP).reduce((a, b) => a + b, 0), 0);
+  assert.equal(total(withRelic) - total(plain), 3 * getRelic('jumper-cable').value);
+
+  const atMax = createBattle(party, 'normal-fastlane', new SeededRng(55), { coins: 0 });
+  const atMaxWithRelic = createBattle(party, 'normal-fastlane', new SeededRng(55), { coins: 0, relicIds: ['jumper-cable'] });
+  assert.equal(total(atMaxWithRelic), total(atMax));
+});
+
+test('Chalk Outline pays out once for the first ally knocked out', () => {
+  assert.equal(getRelic('chalk-outline').mechanicId, 'ko-coins');
+
+  const state = createBattle(party, 'normal-fastlane', new SeededRng(88), { coins: 0, relicIds: ['chalk-outline'] });
+  for (const id of state.allies) {
+    state.units[id].hp = 1;
+    state.units[id].alive = true;
+  }
+
+  let current = state;
+  let events = [];
+  for (let turn = 0; turn < 12 && current.phase !== 'defeat' && !events.some(event => event.type === 'knockout'); turn += 1) {
+    const actor = current.units[current.turnOrder[current.turnIndex]];
+    assert.equal(actor.side, 'ally');
+    const result = resolveBattleCommand(current, { kind: 'guard', actorId: actor.id }, new SeededRng(turn + 1));
+    current = result.nextState;
+    events = [...events, ...result.events];
+  }
+  const coinEvents = events.filter(event => event.type === 'coin');
+
+  assert.ok(events.some(event => event.type === 'knockout' && current.allies.includes(event.targetId)), 'an ally was not knocked out');
+  assert.equal(coinEvents.reduce((sum, event) => sum + event.amount, 0), getRelic('chalk-outline').value);
+  assert.equal(coinEvents.length, 1);
+  assert.equal(current.flags.chalkOutlineUsed, true);
 });
