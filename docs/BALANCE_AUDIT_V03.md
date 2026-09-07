@@ -6,32 +6,32 @@ Generated from the deterministic game engine with 7,920 battles: all 165 three-c
 
 | Tier | Win rate | Avg rounds | Avg survivors | Ending HP |
 |---|---:|---:|---:|---:|
-| normal | 93.2% | 3.95 | 2.48 | 63.1% |
-| elite | 82.6% | 6.03 | 1.88 | 43.3% |
-| boss | 63.7% | 9.20 | 1.37 | 29.7% |
+| normal | 92.8% | 4.02 | 2.47 | 62.6% |
+| elite | 82.3% | 6.09 | 1.87 | 43.1% |
+| boss | 69.4% | 8.89 | 1.51 | 33.5% |
 
-Overall: 83.1% wins, 5.78 average rounds.
+Overall: 84.3% wins, 5.75 average rounds.
 
 ## Character inclusion results
 
 | Character | Overall win | Normal | Elite | Boss | Avg rounds | Ending HP |
 |---|---:|---:|---:|---:|---:|---:|
-| Nathaniel | 90.7% | 96.5% | 89.1% | 80.7% | 5.11 | 54.1% |
-| Yatords | 89.0% | 97.1% | 90.9% | 70.7% | 4.80 | 56.3% |
-| Greg | 88.6% | 96.6% | 88.7% | 72.6% | 4.89 | 54.1% |
-| Earl | 82.9% | 92.4% | 88.1% | 58.7% | 5.93 | 49.4% |
-| Hans | 82.3% | 88.6% | 76.5% | 75.6% | 6.71 | 54.0% |
-| Leandre | 81.1% | 92.9% | 83.5% | 55.0% | 5.71 | 45.3% |
-| Jiro | 81.0% | 91.4% | 80.7% | 60.4% | 6.73 | 51.8% |
-| Marcus | 80.5% | 92.0% | 76.7% | 61.3% | 6.72 | 47.5% |
-| Michael | 80.3% | 89.6% | 79.4% | 62.6% | 5.61 | 46.3% |
-| Daboy | 79.5% | 92.9% | 78.3% | 54.1% | 6.02 | 46.7% |
-| Yeeho | 78.7% | 94.7% | 76.3% | 48.9% | 5.37 | 42.1% |
+| Greg | 90.0% | 96.5% | 88.9% | 78.3% | 4.88 | 54.7% |
+| Yatords | 90.0% | 96.9% | 91.1% | 75.0% | 4.78 | 57.0% |
+| Nathaniel | 89.8% | 95.2% | 87.0% | 81.9% | 5.29 | 52.5% |
+| Earl | 84.2% | 92.6% | 88.0% | 63.7% | 5.87 | 50.1% |
+| Hans | 83.5% | 88.2% | 75.9% | 81.7% | 6.63 | 55.0% |
+| Leandre | 82.6% | 92.4% | 83.9% | 61.7% | 5.66 | 46.1% |
+| Jiro | 82.5% | 90.9% | 80.7% | 67.6% | 6.67 | 52.6% |
+| Marcus | 81.8% | 91.5% | 76.1% | 68.0% | 6.69 | 48.1% |
+| Michael | 81.4% | 89.1% | 78.9% | 68.5% | 5.57 | 47.0% |
+| Daboy | 81.0% | 92.7% | 77.8% | 60.7% | 5.97 | 47.5% |
+| Yeeho | 81.0% | 94.9% | 77.2% | 56.9% | 5.27 | 44.1% |
 
 ## Interpretation
 
-- Mean character-inclusion win rate: 83.1%.
-- Directionally high (>4.5 percentage points above mean): Nathaniel, Yatords, Greg.
+- Mean character-inclusion win rate: 84.3%.
+- Directionally high (>4.5 percentage points above mean): Greg, Yatords, Nathaniel.
 - Directionally low (>4.5 percentage points below mean): none.
 - Do not tune from this table alone. Economy utility, player mastery, party synergy, consumables and route decisions are intentionally underrepresented.
 - Hans should be judged especially on boss/elite performance after the new deployable presentation is visible; perceived impact was a UX problem in v0.1.
