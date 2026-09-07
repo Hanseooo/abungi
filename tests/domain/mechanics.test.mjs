@@ -4,6 +4,8 @@ import { SeededRng } from '../../.domain-build/core/rng/seededRng.js';
 import { createBattle, resolveBattleCommand } from '../../.domain-build/core/combat/battleEngine.js';
 import { validatePlayerCommand } from '../../.domain-build/core/combat/actions.js';
 import { legalEnemyMoves } from '../../.domain-build/core/combat/enemyAi.js';
+import { createRun } from '../../.domain-build/core/progression/run.js';
+import { previewItemPp } from '../../.domain-build/core/progression/itemRecovery.js';
 
 function actorBySource(state, sourceId) {
   const unit=Object.values(state.units).find(u=>u.sourceId===sourceId);
@@ -200,6 +202,18 @@ test('battle items apply their state changes and emit readable feedback events',
   const smokeActor=smoke.units[smoke.turnOrder[smoke.turnIndex]];forceTurn(smoke,smokeActor.id);
   result=resolveBattleCommand(smoke,{kind:'item',actorId:smokeActor.id,itemId:'smoke-bomb',targetIds:[]},new SeededRng(715));
   assert.equal(result.nextState.escaped,true);assert.equal(result.nextState.phase,'victory');
+
+  let fullpp=createBattle(['earl','hans','marcus'],'normal-scrap',new SeededRng(716));
+  const fppActor=fullpp.units[fullpp.turnOrder[fullpp.turnIndex]];const earlFull=actorBySource(fullpp,'earl');forceTurn(fullpp,fppActor.id);
+  assert.equal(validatePlayerCommand(fullpp,{kind:'item',actorId:fppActor.id,itemId:'pp-tonic',targetIds:[earlFull.id]}).legal,false);
+});
+
+test('previewItemPp skips capped abilities and targets the most depleted',()=>{
+  const member=createRun(['earl','hans','leandre'],12).party[0];
+  member.abilityPP.yosi=5; // adrenaline stays full at 4
+  assert.deepEqual(previewItemPp(member,4,[]),{abilityId:'yosi',before:5,after:8});
+  member.abilityPP.yosi=8;
+  assert.equal(previewItemPp(member,4,[]),null);
 });
 
 

@@ -3,6 +3,7 @@ import { getAbility, getCharacter } from '../../content/characters.js';
 import { getItem } from '../../content/items.js';
 import { NEGATIVE_STATUSES } from './status.js';
 import { BALANCE } from '../../balance/constants.js';
+import { previewItemPp } from '../progression/itemRecovery.js';
 
 export interface ActionLegality { legal:boolean; reason?:string }
 
@@ -39,7 +40,7 @@ function itemWouldHaveEffect(state:BattleState, actor:BattleUnit, item:ReturnTyp
   if(item.effects.length===0)return {legal:true};
   const useful=item.effects.some(effect=>{
     if(effect.kind==='healPercent'||effect.kind==='healPartyPercent')return targets.some(target=>target.alive&&target.hp<target.maxHp);
-    if(effect.kind==='restorePP')return targets.some(target=>Object.entries(target.abilityPP??{}).some(([abilityId,current])=>{const ability=getAbility(abilityId);const max=ability.maxPP+(target.upgradedAbilities?.includes(abilityId)?ability.upgrade.maxPPDelta??0:0);return current<max;}));
+    if(effect.kind==='restorePP')return targets.some(target=>previewItemPp(target,effect.amount,state.relicIds)!==null);
     if(effect.kind==='cleanse')return targets.some(target=>target.statuses.some(status=>NEGATIVE_STATUSES.includes(status.id)));
     if(effect.kind==='status')return targets.some(target=>{const existing=target.statuses.find(status=>status.id===effect.statusId);return !existing||existing.remaining<effect.duration;});
     if(effect.kind==='revive')return targets.some(target=>!target.alive||target.hp<=0);

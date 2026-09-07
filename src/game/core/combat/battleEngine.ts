@@ -12,6 +12,7 @@ import { accuracyMultiplier, applyStatus, effectiveSpeed, NEGATIVE_STATUSES, POS
 import { calculateDamage } from './damage.js';
 import { chooseEnemyMove, chooseEnemyTargets } from './enemyAi.js';
 import { livingTargets, validatePlayerCommand } from './actions.js';
+import { previewItemPp } from '../progression/itemRecovery.js';
 
 const clone = <T>(value:T):T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -75,7 +76,8 @@ function enemyUnit(
 }
 
 export function createBattle(
-  partyIds:string[], encounterId:string, rng:SeededRng, options?:{party?:PartyMemberRunState[];coins?:number;relicIds?:string[];regionIndex?:number}
+  partyIds:string[], encounterId:string, rng:SeededRng,
+  options?:{party?:PartyMemberRunState[];coins?:number;relicIds?:string[];regionIndex?:number;openingEvents?:CombatEvent[]}
 ):BattleState {
   if (partyIds.length!==3 || new Set(partyIds).size!==3) throw new Error('A battle requires exactly three unique party members.');
   const encounter=getEncounter(encounterId);
@@ -108,7 +110,7 @@ export function createBattle(
   }
   state.turnOrder=calculateTurnOrder(state);
   // Advance through any opening enemy turns so callers always receive an actionable player state when possible.
-  return advanceAutomaticTurns(state,rng,[]).nextState;
+  return advanceAutomaticTurns(state,rng,options?.openingEvents ?? []).nextState;
 }
 
 export function getCurrentActor(state:BattleState):BattleUnit {
@@ -271,8 +273,8 @@ function resolveEffects(
     if(effect.kind==='restorePP') {
       for(const id of targetIdsFor(state,actor,effect.target,requestedTargets,rng)) {
         const target=state.units[id]; if(!target?.abilityPP) continue;
-        const char=getCharacter(target.sourceId);
-        for(const abilityId of char.abilities) {const amount=Math.round(effect.amount*(state.relicIds.includes('blue-tonic-cap')?1.25:1));target.abilityPP[abilityId]=Math.min(getAbility(abilityId).maxPP,target.abilityPP[abilityId]+amount);}
+        const pp=previewItemPp(target,effect.amount,state.relicIds);
+        if(pp){target.abilityPP[pp.abilityId]=pp.after;events.push({type:'message',text:`${target.displayName}'s ${getAbility(pp.abilityId).name} recovered ${pp.after-pp.before} PP.`});}
       }
       continue;
     }
@@ -414,7 +416,7 @@ function resolveItem(state:BattleState,actor:BattleUnit,command:Extract<BattleCo
     if(effect.kind==='healPercent'||effect.kind==='healPartyPercent'){for(const id of ids){const target=state.units[id];if(target)healOne(state,actor,target,effect.percent,undefined,events);}}
     else if(effect.kind==='status'){for(const id of ids){const target=state.units[id];if(target){target.statuses=applyStatus(target.statuses,effect.statusId,effect.duration);events.push({type:'statusApplied',targetId:target.id,statusId:effect.statusId,duration:effect.duration});}}}
     else if(effect.kind==='cleanse'){for(const id of ids){const target=state.units[id];if(target)cleanseOne(target,effect.count,events);}}
-    else if(effect.kind==='restorePP'){for(const id of ids){const target=state.units[id];if(target?.abilityPP){const abilityId=Object.keys(target.abilityPP).sort((a,b)=>target.abilityPP![a]-target.abilityPP![b])[0];if(abilityId){const amount=Math.round(effect.amount*(state.relicIds.includes('blue-tonic-cap')?1.25:1));const before=target.abilityPP[abilityId];const max=getAbility(abilityId).maxPP+(target.upgradedAbilities?.includes(abilityId)?getAbility(abilityId).upgrade.maxPPDelta??0:0);target.abilityPP[abilityId]=Math.min(max,before+amount);const restored=target.abilityPP[abilityId]-before;if(restored>0)events.push({type:'message',text:`${target.displayName}'s ${getAbility(abilityId).name} recovered ${restored} PP.`});}}}}
+    else if(effect.kind==='restorePP'){for(const id of ids){const target=state.units[id];if(target?.abilityPP){const pp=previewItemPp(target,effect.amount,state.relicIds);if(pp){target.abilityPP[pp.abilityId]=pp.after;events.push({type:'message',text:`${target.displayName}'s ${getAbility(pp.abilityId).name} recovered ${pp.after-pp.before} PP.`});}}}}
     else if(effect.kind==='revive'){for(const id of ids){const target=state.units[id];if(target&&!target.alive){const amount=Math.max(1,Math.round(target.maxHp*effect.percentMaxHp));setHp(target,amount);events.push({type:'revive',targetId:target.id,amount},{type:'heal',targetId:target.id,amount});}}}
     else if(effect.kind==='damage'){for(const id of ids){const target=state.units[id];if(target?.alive)damageOne(state,actor,target,effect.power,'neutral',rng,events,{cannotMiss:true});}}
   }
