@@ -6,6 +6,7 @@ import { getItem } from '../../.domain-build/content/items.js';
 import { getRelic } from '../../.domain-build/content/relics.js';
 import { createRun } from '../../.domain-build/core/progression/run.js';
 import { generateReward, claimReward } from '../../.domain-build/core/progression/rewards.js';
+import { applyEventChoice, canChooseEvent } from '../../.domain-build/core/progression/events.js';
 
 const party = ['earl', 'hans', 'leandre'];
 const startBattle = (options = {}) => createBattle(party, 'normal-fastlane', new SeededRng(777), { coins: 30, ...options });
@@ -115,4 +116,25 @@ test('Chalk Outline pays out once for the first ally knocked out', () => {
   assert.equal(coinEvents.reduce((sum, event) => sum + event.amount, 0), getRelic('chalk-outline').value);
   assert.equal(coinEvents.length, 1);
   assert.equal(current.flags.chalkOutlineUsed, true);
+});
+
+test('Bulk Deal requires room for both consumables before charging the party', () => {
+  const run = createRun(party, 8181);
+  run.coins = 30;
+  run.inventory = [
+    { itemId: 'field-ration', quantity: 1 },
+    { itemId: 'pp-tonic', quantity: 1 },
+    { itemId: 'energy-drink', quantity: 1 },
+    { itemId: 'patch-kit', quantity: 1 },
+    { itemId: 'smoke-bomb', quantity: 1 },
+  ];
+
+  assert.equal(canChooseEvent(run, 'bulk-deal', 'buy').allowed, false);
+
+  run.inventory.pop();
+  const result = applyEventChoice(run, 'bulk-deal', 'buy', new SeededRng(8181));
+  assert.equal(result.run.coins, 10);
+  assert.equal(result.run.inventory.reduce((sum, entry) => sum + entry.quantity, 0), 6);
+  assert.equal(result.run.inventory.find(entry => entry.itemId === 'field-ration')?.quantity, 2);
+  assert.equal(result.run.inventory.find(entry => entry.itemId === 'pp-tonic')?.quantity, 2);
 });

@@ -16,10 +16,11 @@ export function canChooseEvent(run:RunState,eventId:string,choiceId:string):{all
   },0);
   if(run.coins<spend)return{allowed:false,reason:`Need ${spend} coins.`};
 
-  const inventoryFull=run.inventory.reduce((sum,entry)=>sum+entry.quantity,0)>=BALANCE.inventoryCapacity;
-  const hasItemReward=choice.effects.some(effect=>effect.kind==='item');
+  const inventoryCount=run.inventory.reduce((sum,entry)=>sum+entry.quantity,0);
+  const itemRewardCount=choice.effects.filter(effect=>effect.kind==='item').length;
+  const hasItemReward=itemRewardCount>0;
   const onlyItemValue=choice.effects.every(effect=>effect.kind==='item'||(effect.kind==='coins'&&effect.amount<=0)||(effect.kind==='partyHpPercent'&&effect.amount<=0));
-  if(inventoryFull&&hasItemReward&&onlyItemValue)return{allowed:false,reason:'Your pack is full; there is no room for that item.'};
+  if(inventoryCount+itemRewardCount>BALANCE.inventoryCapacity&&hasItemReward&&onlyItemValue)return{allowed:false,reason:'Your pack is too full; there is not enough room for those items.'};
 
   const relicReward=choice.effects.some(effect=>effect.kind==='randomRelic');
   if(relicReward&&RELICS.every(relic=>run.relicIds.includes(relic.id)))return{allowed:false,reason:'You have already discovered every relic this event can offer.'};
