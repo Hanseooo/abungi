@@ -52,3 +52,94 @@ test('Script cannot trigger on the protector transfer', () => {
   applyIncomingEffects(state, foe, hans, 40, []);
   assert.equal(state.effects.some(e => e.id === 'script' && e.targetUnitId === saq.id), true, 'the transfer takes no second defensive pass');
 });
+
+import { SeededRng } from '../../.domain-build/core/rng/seededRng.js';
+import { createBattle, resolveBattleCommand } from '../../.domain-build/core/combat/battleEngine.js';
+
+const kenParty = (members = ['ken','michael','marcus'], seed = 777) =>
+  createBattle(members, 'normal-fastlane', new SeededRng(seed), { coins: 30 });
+const unitOf = (battle, sourceId) => battle.allies.concat(battle.enemies).find(id => battle.units[id].sourceId === sourceId);
+const advanceTo = (battle, unitId, rng) => {
+  while (battle.turnOrder[battle.turnIndex] !== unitId) battle = resolveBattleCommand(battle, { kind: 'guard', actorId: battle.turnOrder[battle.turnIndex] }, rng).nextState;
+  return battle;
+};
+
+test('Fresh Ink cannot consume the mark it is about to apply', () => {
+  const rng = new SeededRng(777);
+  let battle = kenParty();
+  const kenId = unitOf(battle, 'ken');
+  const foeId = battle.enemies[0];
+  battle = advanceTo(battle, kenId, rng);
+  const resolution = resolveBattleCommand(battle, { kind: 'skill', actorId: kenId, abilityId: 'fresh-ink', targetIds: [foeId] }, rng);
+  assert.equal(resolution.events.filter(e => e.type === 'effectRemoved' && e.effectId === 'ink-mark').length, 0);
+  assert.equal(resolution.nextState.effects.filter(e => e.id === 'ink-mark').length, 1);
+});
+
+test('another ally consuming the mark adds 20 plus the 8-power passive, once per round', () => {
+  const rng = new SeededRng(777);
+  let battle = kenParty();
+  const kenId = unitOf(battle, 'ken');
+  const michaelId = unitOf(battle, 'michael');
+  const foeId = battle.enemies[0];
+  battle.effects.push({ uid: 'fx-mark', id: 'ink-mark', sourceUnitId: kenId, targetUnitId: foeId, expiry: 'source-turn-start', remaining: 2 });
+  battle = advanceTo(battle, michaelId, rng);
+  const resolution = resolveBattleCommand(battle, { kind: 'skill', actorId: michaelId, abilityId: 'rifle-burst', targetIds: [foeId] }, rng);
+  assert.ok(resolution.events.some(e => e.type === 'message' && e.text.includes('28 power')), 'mark 20 plus Collaborative Work 8');
+  assert.equal(resolution.nextState.effects.filter(e => e.id === 'ink-mark').length, 0);
+  assert.equal(Number(resolution.nextState.units[kenId].flags.collaborativeWorkRound), battle.round);
+});
+
+test('Ken consuming his own mark gets 20 and does not trigger his passive', () => {
+  const rng = new SeededRng(777);
+  let battle = kenParty();
+  const kenId = unitOf(battle, 'ken');
+  const foeId = battle.enemies[0];
+  battle.effects.push({ uid: 'fx-mark', id: 'ink-mark', sourceUnitId: kenId, targetUnitId: foeId, expiry: 'source-turn-start', remaining: 2 });
+  battle = advanceTo(battle, kenId, rng);
+  const resolution = resolveBattleCommand(battle, { kind: 'skill', actorId: kenId, abilityId: 'needlework', targetIds: [foeId] }, rng);
+  // 20 base + 20 mark + 12 Needlework = 52 on the consuming hit; the other two hits stay at 20.
+  assert.ok(resolution.events.some(e => e.type === 'message' && e.text.includes('32 power')), 'mark 20 plus Needlework 12, no passive');
+  assert.equal(resolution.events.filter(e => e.type === 'message' && e.text.includes('power')).length, 1, 'the bonus applies once per action, not per hit');
+});
+
+test('a mark cannot be consumed twice by one multi-hit action', () => {
+  const rng = new SeededRng(777);
+  let battle = kenParty(['ken','leandre','marcus']);
+  const kenId = unitOf(battle, 'ken');
+  const leandreId = unitOf(battle, 'leandre');
+  battle.effects.push({ uid: 'fx-mark', id: 'ink-mark', sourceUnitId: kenId, targetUnitId: battle.enemies[0], expiry: 'source-turn-start', remaining: 2 });
+  battle = advanceTo(battle, leandreId, rng);
+  const resolution = resolveBattleCommand(battle, { kind: 'skill', actorId: leandreId, abilityId: 'scatter', targetIds: [battle.enemies[0]] }, rng);
+  assert.equal(resolution.events.filter(e => e.type === 'effectRemoved' && e.effectId === 'ink-mark').length, 1);
+});
+
+import { validatePlayerCommand } from '../../.domain-build/core/combat/actions.js';
+
+test('Protective Script is rejected when it would add no new or later Script', () => {
+  const battle = kenParty();
+  const kenId = unitOf(battle, 'ken');
+  const marcusId = unitOf(battle, 'marcus');
+  battle.turnIndex = battle.turnOrder.indexOf(kenId);
+  battle.effects.push({ uid: 'fx-s', id: 'script', sourceUnitId: kenId, targetUnitId: marcusId, expiry: 'source-turn-start', remaining: 2 });
+  const verdict = validatePlayerCommand(battle, { kind: 'skill', actorId: kenId, abilityId: 'protective-script', targetIds: [marcusId] });
+  assert.equal(verdict.legal, false);
+  assert.match(verdict.reason, /already/i);
+});
+
+test('Full Sleeve is rejected only when no living ally would gain anything', () => {
+  const battle = kenParty();
+  const kenId = unitOf(battle, 'ken');
+  battle.turnIndex = battle.turnOrder.indexOf(kenId);
+  for (const allyId of battle.allies) battle.effects.push({ uid: `fx-${allyId}`, id: 'script', sourceUnitId: kenId, targetUnitId: allyId, expiry: 'source-turn-start', remaining: 2 });
+  assert.equal(validatePlayerCommand(battle, { kind: 'skill', actorId: kenId, abilityId: 'full-sleeve', targetIds: [] }).legal, false);
+
+  battle.effects = battle.effects.slice(1);
+  assert.equal(validatePlayerCommand(battle, { kind: 'skill', actorId: kenId, abilityId: 'full-sleeve', targetIds: [] }).legal, true);
+});
+
+test('Needlework stays legal with no mark available', () => {
+  const battle = kenParty();
+  const kenId = unitOf(battle, 'ken');
+  battle.turnIndex = battle.turnOrder.indexOf(kenId);
+  assert.equal(validatePlayerCommand(battle, { kind: 'skill', actorId: kenId, abilityId: 'needlework', targetIds: [battle.enemies[0]] }).legal, true);
+});

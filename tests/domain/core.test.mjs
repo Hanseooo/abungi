@@ -53,8 +53,8 @@ test('haste and slow affect speed; status durations tick consistently', () => {
   assert.deepEqual(statuses, [{id:'blind', remaining:1}]);
 });
 
-test('all 12 characters exist with four distinct abilities', () => {
-  assert.equal(CHARACTERS.length, 12);
+test('all 13 characters exist with four distinct abilities', () => {
+  assert.equal(CHARACTERS.length, 13);
   for (const c of CHARACTERS) {
     assert.equal(c.abilities.length, 4, c.displayName);
     assert.equal(new Set(c.abilities).size, 4, c.displayName);

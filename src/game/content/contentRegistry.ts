@@ -22,7 +22,7 @@ export function validateContent(): ContentValidationResult {
   }
   const enemies = new Set(ENEMIES.map(v=>v.id));
   for (const e of ENCOUNTERS) for (const id of e.enemies) if(!enemies.has(id)) errors.push(`${e.id} references unknown enemy ${id}`);
-  if (CHARACTERS.length !== 12) errors.push(`Expected 12 characters, found ${CHARACTERS.length}`);
+  if (CHARACTERS.length !== 13) errors.push(`Expected 13 characters, found ${CHARACTERS.length}`);
   if (RELICS.length < 12) errors.push(`Expected >=12 relics, found ${RELICS.length}`);
   if (EVENTS.length < 8) errors.push(`Expected >=8 events, found ${EVENTS.length}`);
   return {valid:errors.length===0,errors};

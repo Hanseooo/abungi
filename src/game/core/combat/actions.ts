@@ -1,8 +1,8 @@
-import type { AbilityDefinition, BattleCommand, BattleState, BattleUnit } from '../types.js';
+import type { AbilityDefinition, BattleCommand, BattleState, BattleUnit, EffectDefinition } from '../types.js';
 import { getAbility, getCharacter } from '../../content/characters.js';
 import { getItem } from '../../content/items.js';
 import { NEGATIVE_STATUSES } from './status.js';
-import { findEffect } from './battleEffects.js';
+import { EFFECT_LIFETIMES, findEffect } from './battleEffects.js';
 import { BALANCE } from '../../balance/constants.js';
 import { previewItemPp } from '../progression/itemRecovery.js';
 
@@ -95,6 +95,17 @@ export function validatePlayerCommand(state:BattleState, command:BattleCommand):
     if(targetId===actor.id) return {legal:false,reason:'Protect must cover another ally, not its caster.'};
     const existing=targetId?findEffect(state,'protect',targetId):undefined;
     if(existing&&existing.sourceUnitId===actor.id) return {legal:false,reason:'That ally is already protected until your next turn.'};
+  }
+  const scriptEffect=ability.effects.find((effect): effect is Extract<EffectDefinition,{kind:'applyEffect'}>=>effect.kind==='applyEffect'&&effect.effectId==='script');
+  if(scriptEffect){
+    const candidates=scriptEffect.target==='ally-all'
+      ? livingTargets(state,actor.side)
+      : command.targetIds.map(id=>state.units[id]).filter((unit):unit is BattleUnit=>Boolean(unit));
+    const gains=candidates.some(candidate=>{
+      const existing=findEffect(state,'script',candidate.id);
+      return !existing||existing.remaining<EFFECT_LIFETIMES.script.remaining;
+    });
+    if(!gains) return {legal:false,reason:scriptEffect.target==='ally-all'?'Every living ally already carries an equal Script.':'That ally already carries an equal Script.'};
   }
   return validateAbilityTargets(state,actor,ability,command.targetIds);
 }
