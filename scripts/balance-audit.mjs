@@ -95,24 +95,29 @@ function chooseCommand(battle){
   return candidates[0].command;
 }
 
+const ROUND_CAP=30;
+const COMMAND_CAP=180;
 function regionFor(encounter){if(encounter.id==='boss-jonlow')return 0;if(encounter.id==='boss-klyde')return 1;if(encounter.id==='boss-warden')return 2;return encounter.tier==='elite'?1:0;}
 function simulate(party,encounter,seed){
   const rng=new SeededRng(seed);let battle=createBattle(party,encounter.id,rng,{coins:30,regionIndex:regionFor(encounter)});let actions=0;
-  while((battle.phase==='input'||battle.phase==='resolving')&&actions<180){if(battle.phase!=='input')throw new Error('Engine returned unresolved automatic state');const command=chooseCommand(battle);battle=resolveBattleCommand(battle,command,rng).nextState;actions++;}
-  const allies=battle.allies.map(id=>battle.units[id]);return {won:battle.phase==='victory',rounds:battle.round,actions,survivors:allies.filter(a=>a.alive).length,hpRatio:allies.reduce((s,a)=>s+a.hp/a.maxHp,0)/allies.length};
+  while((battle.phase==='input'||battle.phase==='resolving')&&actions<COMMAND_CAP&&battle.round<=ROUND_CAP){if(battle.phase!=='input')throw new Error('Engine returned unresolved automatic state');const command=chooseCommand(battle);battle=resolveBattleCommand(battle,command,rng).nextState;actions++;}
+  const allies=battle.allies.map(id=>battle.units[id]);
+  const outcome=battle.escaped?'escape':battle.phase==='victory'?'win':battle.phase==='defeat'?'defeat':'timeout';
+  return {outcome,won:outcome==='win',rounds:battle.round,actions,survivors:allies.filter(a=>a.alive).length,hpRatio:allies.reduce((s,a)=>s+a.hp/a.maxHp,0)/allies.length};
 }
 
 const records=[];const seeds=[101,202,303,404];
 for(const party of parties)for(const encounter of ENCOUNTERS)for(const seed of seeds){const mixed=(seed^party.join('').split('').reduce((a,c)=>Math.imul(a^c.charCodeAt(0),16777619)>>>0,2166136261)^encounter.id.length)>>>0;records.push({party,encounter:encounter.id,tier:encounter.tier,...simulate(party,encounter,mixed)});}
 
 const tiers=['normal','elite','boss'];
-function summarize(rows){return {n:rows.length,winRate:rows.filter(r=>r.won).length/rows.length,rounds:rows.reduce((s,r)=>s+r.rounds,0)/rows.length,survivors:rows.reduce((s,r)=>s+r.survivors,0)/rows.length,hpRatio:rows.reduce((s,r)=>s+r.hpRatio,0)/rows.length};}
+function summarize(rows){return {n:rows.length,winRate:rows.filter(r=>r.won).length/rows.length,rounds:rows.reduce((s,r)=>s+r.rounds,0)/rows.length,survivors:rows.reduce((s,r)=>s+r.survivors,0)/rows.length,hpRatio:rows.reduce((s,r)=>s+r.hpRatio,0)/rows.length,timeouts:rows.filter(r=>r.outcome==='timeout').length,defeats:rows.filter(r=>r.outcome==='defeat').length,escapes:rows.filter(r=>r.outcome==='escape').length,medianRounds:(()=>{const wins=rows.filter(r=>r.outcome==='win').map(r=>r.rounds).sort((a,b)=>a-b);return wins.length?wins[Math.floor(wins.length/2)]:0;})(),p90Rounds:(()=>{const wins=rows.filter(r=>r.outcome==='win').map(r=>r.rounds).sort((a,b)=>a-b);return wins.length?wins[Math.min(wins.length-1,Math.floor(wins.length*0.9))]:0;})()};}
 const overall=summarize(records);const tierStats=Object.fromEntries(tiers.map(t=>[t,summarize(records.filter(r=>r.tier===t))]));
 const characterStats=CHARACTERS.map(c=>{const rows=records.filter(r=>r.party.includes(c.id));const all=summarize(rows);const byTier=Object.fromEntries(tiers.map(t=>[t,summarize(rows.filter(r=>r.tier===t))]));return {id:c.id,name:c.displayName,...all,byTier};}).sort((a,b)=>b.winRate-a.winRate||b.hpRatio-a.hpRatio);
 
 const fmtPct=n=>`${(n*100).toFixed(1)}%`;const fmt=n=>n.toFixed(2);
-let md=`# Abungi v0.3 Character Balance Audit\n\nGenerated from the deterministic game engine with ${records.length.toLocaleString()} battles: all 165 three-character parties × 12 encounters × ${seeds.length} deterministic seeds. The policy is a conservative heuristic that uses healing, statuses, deployables, multi-target attacks and signatures; it is diagnostic, not a substitute for human playtesting. No consumable items or relics are injected, and Leandre begins encounters with 30 coins so Clearance Sale can be represented without unlimited economy.\n\n## Global pacing\n\n| Tier | Win rate | Avg rounds | Avg survivors | Ending HP |\n|---|---:|---:|---:|---:|\n`;
-for(const t of tiers){const x=tierStats[t];md+=`| ${t} | ${fmtPct(x.winRate)} | ${fmt(x.rounds)} | ${fmt(x.survivors)} | ${fmtPct(x.hpRatio)} |\n`;}
+let md=`# Abungi v0.3 Character Balance Audit\n\nGenerated from the deterministic game engine with ${records.length.toLocaleString()} battles: all ${parties.length} three-character parties from ${CHARACTERS.length} characters × ${ENCOUNTERS.length} encounters × ${seeds.length} deterministic seeds. The policy is a conservative heuristic that uses healing, statuses, deployables, multi-target attacks and signatures; it is diagnostic, not a substitute for human playtesting. No consumable items or relics are injected, and Leandre begins encounters with 30 coins so Clearance Sale can be represented without unlimited economy.\n\n`;
+md+=`Provenance: revision \`${process.env.SPEC03_REV ?? 'unrecorded'}\`, working tree \`${process.env.SPEC03_TREE ?? 'unrecorded'}\`, seeds \`${seeds.join(',')}\`, policy \`${process.env.SPEC03_POLICY ?? 'heuristic-v1'}\`, timeout cap ${ROUND_CAP} rounds / ${COMMAND_CAP} commands. Party rows share members, so they are not independent observations.\n\n## Global pacing\n\n| Tier | Win rate | Avg rounds | Median rounds | p90 rounds | Avg survivors | Ending HP | Timeouts | Defeats |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|\n`;
+for(const t of tiers){const x=tierStats[t];md+=`| ${t} | ${fmtPct(x.winRate)} | ${fmt(x.rounds)} | ${x.medianRounds} | ${x.p90Rounds} | ${fmt(x.survivors)} | ${fmtPct(x.hpRatio)} | ${x.timeouts} | ${x.defeats} |\n`;}
 md+=`\nOverall: ${fmtPct(overall.winRate)} wins, ${fmt(overall.rounds)} average rounds.\n\n## Character inclusion results\n\n| Character | Overall win | Normal | Elite | Boss | Avg rounds | Ending HP |\n|---|---:|---:|---:|---:|---:|---:|\n`;
 for(const c of characterStats)md+=`| ${c.name} | ${fmtPct(c.winRate)} | ${fmtPct(c.byTier.normal.winRate)} | ${fmtPct(c.byTier.elite.winRate)} | ${fmtPct(c.byTier.boss.winRate)} | ${fmt(c.rounds)} | ${fmtPct(c.hpRatio)} |\n`;
 const mid=characterStats.reduce((s,c)=>s+c.winRate,0)/characterStats.length;

@@ -1,36 +1,39 @@
 # Abungi v0.3 Character Balance Audit
 
-Generated from the deterministic game engine with 7,920 battles: all 165 three-character parties × 12 encounters × 4 deterministic seeds. The policy is a conservative heuristic that uses healing, statuses, deployables, multi-target attacks and signatures; it is diagnostic, not a substitute for human playtesting. No consumable items or relics are injected, and Leandre begins encounters with 30 coins so Clearance Sale can be represented without unlimited economy.
+Generated from the deterministic game engine with 10,560 battles: all 220 three-character parties from 12 characters × 12 encounters × 4 deterministic seeds. The policy is a conservative heuristic that uses healing, statuses, deployables, multi-target attacks and signatures; it is diagnostic, not a substitute for human playtesting. No consumable items or relics are injected, and Leandre begins encounters with 30 coins so Clearance Sale can be represented without unlimited economy.
+
+Provenance: revision `6515a891407f96827be3d17e0c22664b7b427214`, working tree `unrecorded`, seeds `101,202,303,404`, policy `heuristic-v1`, timeout cap 30 rounds / 180 commands. Party rows share members, so they are not independent observations.
 
 ## Global pacing
 
-| Tier | Win rate | Avg rounds | Avg survivors | Ending HP |
-|---|---:|---:|---:|---:|
-| normal | 92.8% | 4.02 | 2.47 | 62.6% |
-| elite | 82.3% | 6.09 | 1.87 | 43.1% |
-| boss | 69.4% | 8.89 | 1.51 | 33.5% |
+| Tier | Win rate | Avg rounds | Median rounds | p90 rounds | Avg survivors | Ending HP | Timeouts | Defeats |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| normal | 92.0% | 4.21 | 4 | 7 | 2.44 | 61.9% | 0 | 425 |
+| elite | 82.2% | 6.34 | 5 | 9 | 1.87 | 42.8% | 0 | 471 |
+| boss | 67.9% | 9.19 | 8 | 13 | 1.49 | 33.1% | 0 | 848 |
 
-Overall: 84.3% wins, 5.75 average rounds.
+Overall: 83.5% wins, 5.99 average rounds.
 
 ## Character inclusion results
 
 | Character | Overall win | Normal | Elite | Boss | Avg rounds | Ending HP |
 |---|---:|---:|---:|---:|---:|---:|
-| Greg | 90.0% | 96.5% | 88.9% | 78.3% | 4.88 | 54.7% |
-| Yatords | 90.0% | 96.9% | 91.1% | 75.0% | 4.78 | 57.0% |
-| Nathaniel | 89.8% | 95.2% | 87.0% | 81.9% | 5.29 | 52.5% |
-| Earl | 84.2% | 92.6% | 88.0% | 63.7% | 5.87 | 50.1% |
-| Hans | 83.5% | 88.2% | 75.9% | 81.7% | 6.63 | 55.0% |
-| Leandre | 82.6% | 92.4% | 83.9% | 61.7% | 5.66 | 46.1% |
-| Jiro | 82.5% | 90.9% | 80.7% | 67.6% | 6.67 | 52.6% |
-| Marcus | 81.8% | 91.5% | 76.1% | 68.0% | 6.69 | 48.1% |
-| Michael | 81.4% | 89.1% | 78.9% | 68.5% | 5.57 | 47.0% |
-| Daboy | 81.0% | 92.7% | 77.8% | 60.7% | 5.97 | 47.5% |
-| Yeeho | 81.0% | 94.9% | 77.2% | 56.9% | 5.27 | 44.1% |
+| Greg | 89.6% | 95.8% | 89.7% | 77.3% | 5.00 | 54.2% |
+| Yatords | 89.5% | 96.7% | 91.1% | 73.5% | 4.88 | 57.0% |
+| Nathaniel | 88.7% | 94.7% | 85.8% | 79.7% | 5.43 | 51.7% |
+| Earl | 83.7% | 91.8% | 88.0% | 63.2% | 6.08 | 49.3% |
+| Hans | 83.2% | 87.3% | 76.5% | 81.8% | 6.82 | 55.7% |
+| Jiro | 82.2% | 90.2% | 81.2% | 67.0% | 6.90 | 52.7% |
+| Leandre | 81.9% | 92.0% | 82.7% | 60.9% | 5.84 | 45.6% |
+| Marcus | 81.0% | 90.7% | 75.9% | 66.7% | 6.89 | 47.5% |
+| Saq | 80.9% | 89.4% | 81.7% | 63.2% | 6.69 | 48.3% |
+| Michael | 80.9% | 88.5% | 79.1% | 67.6% | 5.72 | 46.7% |
+| Yeeho | 80.4% | 94.6% | 76.7% | 55.6% | 5.42 | 43.6% |
+| Daboy | 79.8% | 91.7% | 77.6% | 58.2% | 6.18 | 46.7% |
 
 ## Interpretation
 
-- Mean character-inclusion win rate: 84.3%.
+- Mean character-inclusion win rate: 83.5%.
 - Directionally high (>4.5 percentage points above mean): Greg, Yatords, Nathaniel.
 - Directionally low (>4.5 percentage points below mean): none.
 - Do not tune from this table alone. Economy utility, player mastery, party synergy, consumables and route decisions are intentionally underrepresented.
