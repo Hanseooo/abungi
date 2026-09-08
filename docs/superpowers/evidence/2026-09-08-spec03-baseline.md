@@ -70,3 +70,35 @@ Event variety (20,000 seeds, 3 regions):
 ## Known provenance defect
 scripts/balance-audit.mjs prints a hardcoded "165 three-character parties x 12 encounters"
 string in its markdown header while enumerating parties dynamically. Part C Task 1 fixes it.
+
+## Part A gate
+
+Commits: 9107798 (types), 6c60e93 (lifecycle), db2b498 (engine wiring), 5b151e4 (save V3)
+
+### typecheck
+Exit code: 0 — PASS
+
+### test:domain
+Exit code: 0 — PASS
+tests 113 / pass 113 / fail 0
+
+### test:release
+Exit code: 1 — pre-existing failure only (same as baseline: CSS font-size floor, v03-ui.test.mjs:41)
+tests 39 / pass 38 / fail 1
+
+### test:vitest
+Exit code: 0 — PASS
+Test Files 6 passed (6) / Tests 18 passed (18)
+
+### Balance audit diff
+Global pacing after Part A is identical to baseline:
+
+| Tier | Win rate | Avg rounds | Avg survivors | Ending HP |
+|---|---:|---:|---:|---:|
+| normal | 92.8% | 4.02 | 2.47 | 62.6% |
+| elite | 82.3% | 6.09 | 1.87 | 43.1% |
+| boss | 69.4% | 8.89 | 1.51 | 33.5% |
+
+Overall: 84.3% wins, 5.75 average rounds.
+
+Diff result: empty (no behaviour drift). Part A adds no gameplay.
