@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { SeededRng } from '../.domain-build/core/rng/seededRng.js';
+import { SeededRng, hashText } from '../.domain-build/core/rng/seededRng.js';
 import { createBattle, resolveBattleCommand } from '../.domain-build/core/combat/battleEngine.js';
 import { validatePlayerCommand } from '../.domain-build/core/combat/actions.js';
 import { affinityMultiplier } from '../.domain-build/core/combat/affinity.js';
@@ -135,10 +135,24 @@ const COMMAND_CAP=180;
 function regionFor(encounter){if(encounter.id==='boss-jonlow')return 0;if(encounter.id==='boss-klyde')return 1;if(encounter.id==='boss-warden')return 2;return encounter.tier==='elite'?1:0;}
 function simulate(party,encounter,seed){
   const rng=new SeededRng(seed);let battle=createBattle(party,encounter.id,rng,{coins:30,regionIndex:regionFor(encounter)});let actions=0;
-  while((battle.phase==='input'||battle.phase==='resolving')&&actions<COMMAND_CAP&&battle.round<=ROUND_CAP){if(battle.phase!=='input')throw new Error('Engine returned unresolved automatic state');const command=chooseCommand(battle);battle=resolveBattleCommand(battle,command,rng).nextState;actions++;}
+  const tally={protectCasts:0,protectTriggers:0,protectExpired:0,recipientAvoided:0,transferPaid:0,monitorPrevented:0,readyGranted:0,readySpent:0};
+  while((battle.phase==='input'||battle.phase==='resolving')&&actions<COMMAND_CAP&&battle.round<=ROUND_CAP){
+    if(battle.phase!=='input')throw new Error('Engine returned unresolved automatic state');
+    const command=chooseCommand(battle);
+    const resolution=resolveBattleCommand(battle,command,rng);
+    for(const event of resolution.events){
+      if(event.type==='effectApplied'&&event.effectId==='protect')tally.protectCasts++;
+      if(event.type==='effectRemoved'&&event.effectId==='protect'&&event.reason==='consumed')tally.protectTriggers++;
+      if(event.type==='effectRemoved'&&event.effectId==='protect'&&event.reason==='expired')tally.protectExpired++;
+      if(event.type==='transfer')tally.transferPaid+=event.amount;
+      if(event.type==='prevented'&&event.kind==='class-monitor')tally.monitorPrevented+=event.amount;
+      if(event.type==='ready')event.active?tally.readyGranted++:tally.readySpent++;
+    }
+    battle=resolution.nextState;actions++;
+  }
   const allies=battle.allies.map(id=>battle.units[id]);
   const outcome=battle.escaped?'escape':battle.phase==='victory'?'win':battle.phase==='defeat'?'defeat':'timeout';
-  return {outcome,won:outcome==='win',rounds:battle.round,actions,survivors:allies.filter(a=>a.alive).length,hpRatio:allies.reduce((s,a)=>s+a.hp/a.maxHp,0)/allies.length};
+  return {outcome,won:outcome==='win',rounds:battle.round,actions,survivors:allies.filter(a=>a.alive).length,hpRatio:allies.reduce((s,a)=>s+a.hp/a.maxHp,0)/allies.length,...tally};
 }
 
 if(process.env.SPEC03_TRACE){
@@ -153,8 +167,26 @@ if(process.env.SPEC03_TRACE){
   process.exit(0);
 }
 
-const records=[];const seeds=[101,202,303,404];
+const SCREENING_SEEDS=[101,202,303,404,505,606,707,808,909,1010,1111,1212,1313,1414,1515,1616,1717,1818,1919,2020,2121,2222,2323,2424,2525,2626,2727,2828,2929,3030,3131,3232];
+const EXPANDED_SEEDS=[...SCREENING_SEEDS,...Array.from({length:96},(_,i)=>4000+i*37)];
+const seeds=process.env.SPEC03_SEEDS==='expanded'?EXPANDED_SEEDS:SCREENING_SEEDS;
+const records=[];
 for(const party of parties)for(const encounter of ENCOUNTERS)for(const seed of seeds){const mixed=(seed^party.join('').split('').reduce((a,c)=>Math.imul(a^c.charCodeAt(0),16777619)>>>0,2166136261)^encounter.id.length)>>>0;records.push({party,encounter:encounter.id,tier:encounter.tier,...simulate(party,encounter,mixed)});}
+
+/** Hold two teammates fixed, swap the third, run the same encounter seeds. */
+function matchedSlot(subjectId,alternativeId){
+  const others=CHARACTERS.map(c=>c.id).filter(id=>id!==subjectId&&id!==alternativeId);
+  const rows=[];
+  for(const pair of combinations(others,2))for(const encounter of ENCOUNTERS)for(const seed of seeds){
+    const scenarioSeed=(seed^hashText(`${pair.join('|')}|${encounter.id}`))>>>0;
+    rows.push({
+      pair,encounter:encounter.id,tier:encounter.tier,
+      subject:simulate([subjectId,...pair],encounter,scenarioSeed),
+      alternative:simulate([alternativeId,...pair],encounter,scenarioSeed),
+    });
+  }
+  return rows;
+}
 
 const tiers=['normal','elite','boss'];
 function summarize(rows){return {n:rows.length,winRate:rows.filter(r=>r.won).length/rows.length,rounds:rows.reduce((s,r)=>s+r.rounds,0)/rows.length,survivors:rows.reduce((s,r)=>s+r.survivors,0)/rows.length,hpRatio:rows.reduce((s,r)=>s+r.hpRatio,0)/rows.length,timeouts:rows.filter(r=>r.outcome==='timeout').length,defeats:rows.filter(r=>r.outcome==='defeat').length,escapes:rows.filter(r=>r.outcome==='escape').length,medianRounds:(()=>{const wins=rows.filter(r=>r.outcome==='win').map(r=>r.rounds).sort((a,b)=>a-b);return wins.length?wins[Math.floor(wins.length/2)]:0;})(),p90Rounds:(()=>{const wins=rows.filter(r=>r.outcome==='win').map(r=>r.rounds).sort((a,b)=>a-b);return wins.length?wins[Math.min(wins.length-1,Math.floor(wins.length*0.9))]:0;})()};}
@@ -170,5 +202,42 @@ for(const c of characterStats)md+=`| ${c.name} | ${fmtPct(c.winRate)} | ${fmtPct
 const mid=characterStats.reduce((s,c)=>s+c.winRate,0)/characterStats.length;
 const high=characterStats.filter(c=>c.winRate>mid+.045).map(c=>c.name);const low=characterStats.filter(c=>c.winRate<mid-.045).map(c=>c.name);
 md+=`\n## Interpretation\n\n- Mean character-inclusion win rate: ${fmtPct(mid)}.\n- Directionally high (>4.5 percentage points above mean): ${high.length?high.join(', '):'none'}.\n- Directionally low (>4.5 percentage points below mean): ${low.length?low.join(', '):'none'}.\n- Do not tune from this table alone. Economy utility, player mastery, party synergy, consumables and route decisions are intentionally underrepresented.\n- Hans should be judged especially on boss/elite performance after the new deployable presentation is visible; perceived impact was a UX problem in v0.1.\n- Leandre's run-level value is undercounted because this encounter audit cannot price his extra shop offer.\n\n`;
+// Protect diagnostics (Saq-inclusive parties only)
+const saqRows=records.filter(r=>r.party.includes('saq'));
+const totalProtectCasts=saqRows.reduce((s,r)=>s+r.protectCasts,0);
+const totalProtectTriggers=saqRows.reduce((s,r)=>s+r.protectTriggers,0);
+const totalProtectExpired=saqRows.reduce((s,r)=>s+r.protectExpired,0);
+const totalTransferPaid=saqRows.reduce((s,r)=>s+r.transferPaid,0);
+const totalMonitorPrevented=saqRows.reduce((s,r)=>s+r.monitorPrevented,0);
+const totalReadyGranted=saqRows.reduce((s,r)=>s+r.readyGranted,0);
+const totalReadySpent=saqRows.reduce((s,r)=>s+r.readySpent,0);
+md+=`## Protect diagnostics (Saq-inclusive parties, ${saqRows.length} battles)\n\n| Metric | Count |\n|---|---:|\n`;
+md+=`| Protect casts | ${totalProtectCasts} |\n`;
+md+=`| Protect triggered (consumed) | ${totalProtectTriggers} |\n`;
+md+=`| Protect expired unused | ${totalProtectExpired} |\n`;
+md+=`| HP transferred to Saq | ${totalTransferPaid} |\n`;
+md+=`| Class Monitor prevented | ${totalMonitorPrevented} |\n`;
+md+=`| Ready granted | ${totalReadyGranted} |\n`;
+md+=`| Ready spent | ${totalReadySpent} |\n`;
+md+=`\nNote: recipient avoids the full intercepted hit; Saq pays transfer cost; party saves monitorPrevented. These are not the same number.\n\n`;
+
+// Matched-slot comparison: Saq vs Marcus
+const saqVsMarcus=matchedSlot('saq','marcus');
+const tierGroups=['normal','elite','boss'];
+md+=`## Matched-slot replacement: Saq vs Marcus (${saqVsMarcus.length} matched pairs)\n\n`;
+md+=`_Same pair of teammates, same encounter, same seed. RNG diverges after turn 1. These are practical sample sizes, not a statistical guarantee._\n\n`;
+md+=`| Tier | Saq win rate | Marcus win rate | Delta | Saq median rounds | Marcus median rounds |\n|---|---:|---:|---:|---:|---:|\n`;
+for(const t of tierGroups){
+  const tRows=saqVsMarcus.filter(r=>r.tier===t);
+  const saqWin=tRows.filter(r=>r.subject.won).length/tRows.length;
+  const marcWin=tRows.filter(r=>r.alternative.won).length/tRows.length;
+  const delta=(saqWin-marcWin)*100;
+  const saqMed=(()=>{const w=tRows.map(r=>r.subject.rounds).sort((a,b)=>a-b);return w[Math.floor(w.length/2)]??0;})();
+  const marMed=(()=>{const w=tRows.map(r=>r.alternative.rounds).sort((a,b)=>a-b);return w[Math.floor(w.length/2)]??0;})();
+  const flag=Math.abs(delta)>5?' ⚠️':'';
+  md+=`| ${t} | ${fmtPct(saqWin)} | ${fmtPct(marcWin)} | ${delta.toFixed(1)}pp${flag} | ${saqMed} | ${marMed} |\n`;
+}
+md+='\n';
+
 mkdirSync('docs',{recursive:true});writeFileSync('docs/BALANCE_AUDIT_V03.md',md);
 console.log(md);
