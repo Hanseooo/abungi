@@ -19,6 +19,23 @@ export interface StatusInstance {
   remaining: number;
 }
 
+export type BattleEffectId = 'protect' | 'ink-mark' | 'script' | 'taxed';
+
+/**
+ * A source-linked battle effect. Unlike StatusInstance it records who applied it,
+ * who carries it, and which unit's turns count down its lifetime.
+ * `source-turn-start` expires before the source's input becomes available.
+ * `target-turn-end`   expires after the target completes a turn.
+ */
+export interface BattleEffectInstance {
+  uid: string;
+  id: BattleEffectId;
+  sourceUnitId: string;
+  targetUnitId: string;
+  expiry: 'source-turn-start' | 'target-turn-end';
+  remaining: number;
+}
+
 export interface PassiveDefinition {
   id: string;
   name: string;
@@ -44,7 +61,10 @@ export type EffectDefinition =
   | { kind: 'spendCoins'; amount: number }
   | { kind: 'grantCoins'; amount: number; trigger: 'ko' | 'always' }
   | { kind: 'sacrificeHp'; amount: number; basis: 'max' | 'current'; floorAtOne: boolean }
-  | { kind: 'restorePP'; target: TargetMode; amount: number };
+  | { kind: 'restorePP'; target: TargetMode; amount: number }
+  | { kind: 'applyEffect'; effectId: BattleEffectId; target: TargetMode; accuracy?: number; mechanicId?: string }
+  | { kind: 'removeEffect'; target: TargetMode; mechanicId?: string };
+
 
 export type ChoreographyId = 'melee' | 'ranged' | 'multi-hit' | 'explosive' | 'smoke' | 'mystic' | 'drain' | 'buff' | 'defense' | 'summon' | 'heavy' | 'utility';
 
@@ -135,6 +155,7 @@ export interface BattleState {
   turnIndex: number;
   phase: 'input' | 'resolving' | 'victory' | 'defeat';
   deployables: DeployableState[];
+  effects: BattleEffectInstance[];
   recentEnemyMoves: Record<string, string[]>;
   flags: Record<string, number | boolean | string>;
   coinsDelta: number;
@@ -161,6 +182,11 @@ export type CombatEvent =
   | { type: 'coin'; amount: number }
   | { type: 'miss'; actorId: string; targetId: string }
   | { type: 'message'; text: string }
+  | { type: 'effectApplied'; effectId: BattleEffectId; sourceId: string; targetId: string; remaining: number }
+  | { type: 'effectRemoved'; effectId: BattleEffectId; targetId: string; reason: 'expired' | 'consumed' | 'cleared' }
+  | { type: 'prevented'; kind: 'script' | 'class-monitor'; targetId: string; amount: number }
+  | { type: 'transfer'; fromId: string; toId: string; amount: number }
+  | { type: 'ready'; actorId: string; active: boolean }
   | { type: 'victory' }
   | { type: 'defeat' };
 
