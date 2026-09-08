@@ -35,7 +35,22 @@ export const BALANCE = {
     correctiveActionBonusPower: 12,
     dismissedReadyPower: 35,
   },
+  // Spec 03 Part D trial values. Unvalidated tuning hypotheses; Part E measures them.
+  ken: {
+    inkMarkPower: 20,
+    collaborativeWorkPower: 8,
+    needleworkMarkPower: 12,
+    scriptThresholdPercent: 0.20,
+    scriptPrevention: 10,
+  },
   shopBaseOffers: 4,
   regionCount: 3,
   routeStagesBeforeBoss: 6,
+  relicTierWeights: {
+    shop: [[78,20,2], [65,31,4], [50,43,7]],
+    elite: [[72,25,3], [60,35,5], [48,44,8]],
+    boss: [[50,44,6], [30,60,10], [0,85,15]],
+    'folded-tokens': [[90,10,0], [90,10,0], [90,10,0]],
+  },
+  relicBasePrices: { common: 50, uncommon: 60, rare: 75 },
 } as const;
