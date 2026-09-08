@@ -10,8 +10,8 @@ import { resolveScene, ALL_SCENE_VARIANTS } from '../../src/game/content/scenes'
 describe('release content registry', () => {
   test('contains the full v0.3 content set with no broken references', () => {
     expect(validateContent()).toEqual({ valid: true, errors: [] });
-    expect(CHARACTERS).toHaveLength(12);
-    expect(CHARACTERS.flatMap(character => character.abilities)).toHaveLength(48);
+    expect(CHARACTERS).toHaveLength(13);
+    expect(CHARACTERS.flatMap(character => character.abilities)).toHaveLength(52);
     expect(ENEMIES.length).toBeGreaterThanOrEqual(16);
     expect(EVENTS.length).toBeGreaterThanOrEqual(11);
     expect(RELICS.length).toBeGreaterThanOrEqual(16);

@@ -46,7 +46,7 @@ test('local identity/audio assets cover the full playable cast and required soun
   const enemies = cutouts.filter(name => name.startsWith('enemy-'));
   const elites = cutouts.filter(name => name.startsWith('elite-'));
   const bosses = cutouts.filter(name => name.startsWith('boss-'));
-  assert.equal(characters.length, 12);
+  assert.equal(characters.length, 13);
   assert.equal(enemies.length, 10);
   assert.equal(elites.length, 3);
   assert.equal(bosses.length, 3);
@@ -58,8 +58,9 @@ test('battle presentation exposes real 1x, 2x and 3x animation-speed hooks plus 
   const battle = read('src/features/battle/BattleScreen.tsx');
   const css = read('src/styles.css');
   assert.match(battle, /speed-\$\{settings\.animationSpeed\}x/);
-  assert.match(css, /\.battle-screen\.speed-2x\s*\{[^}]*--anim-scale:\s*\.5/s);
-  assert.match(css, /\.battle-screen\.speed-3x\s*\{[^}]*--anim-scale:\s*\.333/s);
+  assert.match(css, /\.battle-screen\s*\{[^}]*--anim-scale:\s*1\.28/s);
+  assert.match(css, /\.battle-screen\.speed-2x\s*\{[^}]*--anim-scale:\s*\.64/s);
+  assert.match(css, /\.battle-screen\.speed-3x\s*\{[^}]*--anim-scale:\s*\.427/s);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
 });
 
