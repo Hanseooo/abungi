@@ -1,4 +1,4 @@
-import { createSaveEnvelope, migrateSaveEnvelope, type SaveEnvelopeV2, type SavePayload } from '../../game/core/save/saveFormat';
+import { createSaveEnvelope, migrateSaveEnvelope, type SaveEnvelopeV3, type SavePayload } from '../../game/core/save/saveFormat';
 import { parseSaveEnvelope } from './schema';
 import type { SaveLoadResult, SaveRepository } from './SaveRepository';
 
@@ -13,7 +13,7 @@ function openDb():Promise<IDBDatabase>{
 }
 function requestResult<T>(request:IDBRequest<T>):Promise<T>{return new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error??new Error('Local save operation failed.'));});}
 
-async function writebackMigrated(migrated:SaveEnvelopeV2):Promise<void>{
+async function writebackMigrated(migrated:SaveEnvelopeV3):Promise<void>{
   const db=await openDb();
   const tx=db.transaction(STORE,'readwrite');
   await requestResult(tx.objectStore(STORE).put(migrated,KEY));
@@ -42,7 +42,7 @@ export class IndexedDbSaveRepository implements SaveRepository{
       catch(error){return{kind:'corrupt',message:error instanceof Error?error.message:'The local save could not be read.'};}
     }catch(error){return{kind:'corrupt',message:error instanceof Error?error.message:'Local storage is unavailable.'};}
   }
-  async save(payload:SavePayload):Promise<SaveEnvelopeV2>{
+  async save(payload:SavePayload):Promise<SaveEnvelopeV3>{
     const current=await this.load();const revision=current.kind==='ok'?current.save.revision+1:1;const envelope=parseSaveEnvelope(createSaveEnvelope(payload,revision));
     const db=await openDb();const tx=db.transaction(STORE,'readwrite');await requestResult(tx.objectStore(STORE).put(envelope,KEY));
     await new Promise<void>((resolve,reject)=>{tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('Local save commit failed.'));tx.onabort=()=>reject(tx.error??new Error('Local save commit was cancelled.'));});db.close();return envelope;

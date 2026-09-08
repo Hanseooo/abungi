@@ -5,6 +5,7 @@ import { generateReward, claimReward } from '../../src/game/core/progression/rew
 import { generateShopOffers } from '../../src/game/core/progression/shop';
 import { createSaveEnvelope, migrateSaveEnvelope, DEFAULT_PROFILE, DEFAULT_SETTINGS } from '../../src/game/core/save/saveFormat';
 import { parseSaveEnvelope } from '../../src/services/save/schema';
+import { createBattle } from '../../src/game/core/combat/battleEngine';
 
 function makeV2Envelope(overrides: Record<string, unknown> = {}) {
   const run = createRun(['earl', 'hans', 'leandre'], 99);
@@ -27,7 +28,7 @@ describe('saveSchema Zod validation', () => {
     const envelope = createSaveEnvelope({ activeRun: claimed, profile: DEFAULT_PROFILE, settings: DEFAULT_SETTINGS }, 1);
     const migrated = migrateSaveEnvelope(envelope);
     const parsed = parseSaveEnvelope(migrated);
-    expect(parsed.schemaVersion).toBe(2);
+    expect(parsed.schemaVersion).toBe(3);
     expect(parsed.payload.activeRun?.party.map(p => p.characterId)).toEqual(claimed.party.map(p => p.characterId));
     expect(parsed.payload.activeRun?.fieldUsesSpent).toBe(0);
     expect(parsed.payload.activeRun?.shopVisit).toBeNull();
@@ -41,6 +42,23 @@ describe('saveSchema Zod validation', () => {
   it('rejects fieldUsesSpent: 0.5 (fractional counter)', () => {
     const bad = makeV2Envelope({ fieldUsesSpent: 0.5 });
     expect(() => parseSaveEnvelope(bad)).toThrow();
+  });
+
+  it('preserves a battle effect collection through parsing', () => {
+    const battle = createBattle(['earl','hans','marcus'], 'normal-fastlane', new SeededRng(777), { coins: 30 });
+    battle.effects = [{ uid: 'fx-1', id: 'protect', sourceUnitId: battle.allies[0], targetUnitId: battle.allies[1], expiry: 'source-turn-start', remaining: 1 }];
+    const run = createRun(['earl', 'hans', 'marcus'], 43);
+    const envelope = createSaveEnvelope({ activeRun: { ...run, activeBattle: battle }, profile: DEFAULT_PROFILE, settings: DEFAULT_SETTINGS }, 1);
+    const parsed = parseSaveEnvelope(JSON.parse(JSON.stringify(envelope)));
+    expect(parsed.payload.activeRun!.activeBattle!.effects).toEqual(battle.effects);
+  });
+
+  it('rejects an unknown effect id rather than silently stripping it', () => {
+    const battle = createBattle(['earl','hans','marcus'], 'normal-fastlane', new SeededRng(777), { coins: 30 });
+    (battle.effects as unknown[]).push({ uid: 'fx-9', id: 'not-a-real-effect', sourceUnitId: 'a', targetUnitId: 'b', expiry: 'source-turn-start', remaining: 1 });
+    const run = createRun(['earl', 'hans', 'marcus'], 43);
+    const envelope = createSaveEnvelope({ activeRun: { ...run, activeBattle: battle }, profile: DEFAULT_PROFILE, settings: DEFAULT_SETTINGS }, 1);
+    expect(() => parseSaveEnvelope(JSON.parse(JSON.stringify(envelope)))).toThrow();
   });
 
   it('rejects shopVisit with purchasedOfferId absent from offers', () => {

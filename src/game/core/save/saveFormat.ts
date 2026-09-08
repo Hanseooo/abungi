@@ -1,15 +1,16 @@
 import type { ProfileState, RunState, SettingsState, ShopVisit } from '../types.js';
 import { generateShopOffers } from '../progression/shop.js';
 
-export const SAVE_SCHEMA_VERSION = 2 as const;
+export const SAVE_SCHEMA_VERSION = 3 as const;
 export const DEFAULT_PROFILE:ProfileState={runsStarted:0,wins:0,bestScore:0,bossesDefeated:0,discoveredRelics:[],discoveredEnemies:[],characterUsage:{}};
 export const DEFAULT_SETTINGS:SettingsState={masterMuted:false,musicVolume:0.55,sfxVolume:0.75,animationSpeed:2,reducedMotion:false};
 
 export interface SavePayload {activeRun:RunState|null;profile:ProfileState;settings:SettingsState}
 export interface SaveEnvelopeV1 {schemaVersion:1;timestamp:string;revision:number;payload:SavePayload}
 export interface SaveEnvelopeV2 {schemaVersion:2;timestamp:string;revision:number;payload:SavePayload;persistenceWarning?:string}
+export interface SaveEnvelopeV3 {schemaVersion:3;timestamp:string;revision:number;payload:SavePayload;persistenceWarning?:string}
 
-export function createSaveEnvelope(payload:SavePayload,revision:number,timestamp=new Date().toISOString()):SaveEnvelopeV2{
+export function createSaveEnvelope(payload:SavePayload,revision:number,timestamp=new Date().toISOString()):SaveEnvelopeV3{
   return {schemaVersion:SAVE_SCHEMA_VERSION,timestamp,revision:Math.max(0,Math.floor(revision)),payload};
 }
 
@@ -17,7 +18,7 @@ const isRecord=(v:unknown):v is Record<string,unknown>=>typeof v==='object'&&v!=
 export function validateSaveShape(raw:unknown):{valid:boolean;errors:string[]} {
   const errors:string[]=[];
   if(!isRecord(raw)){return{valid:false,errors:['Save is not an object.']};}
-  if(raw.schemaVersion!==2)errors.push('Unsupported save schema version.');
+  if(raw.schemaVersion!==3)errors.push('Unsupported save schema version.');
   if(typeof raw.timestamp!=='string')errors.push('Missing save timestamp.');
   if(typeof raw.revision!=='number'||!Number.isFinite(raw.revision))errors.push('Invalid save revision.');
   if(!isRecord(raw.payload))errors.push('Missing save payload.');
@@ -48,24 +49,38 @@ function migrateRunV1toV2(run:unknown):RunState {
   return {...r,fieldUsesSpent,shopVisit};
 }
 
-export function migrateSaveEnvelope(raw:unknown):SaveEnvelopeV2{
+function migrateRunV2toV3(run:unknown):RunState {
+  const r=run as RunState;
+  if(!r.activeBattle) return r;
+  return {...r, activeBattle:{...r.activeBattle, effects:Array.isArray(r.activeBattle.effects)?r.activeBattle.effects:[]}};
+}
+
+export function migrateSaveEnvelope(raw:unknown):SaveEnvelopeV3{
   if(!isRecord(raw))throw new Error('Save is corrupt or unreadable.');
   const version=raw.schemaVersion;
   if(typeof version!=='number')throw new Error('Save has no schema version.');
-  if(version>2)throw new Error('Save was created by a newer, unsupported version of Abungi.');
+  if(version>3)throw new Error('Save was created by a newer, unsupported version of Abungi.');
   if(version<1)throw new Error('Save schema version is unsupported.');
 
-  if(version===1){
-    const v1=raw as unknown as SaveEnvelopeV1;
+  let envelope=raw as unknown as SaveEnvelopeV1|SaveEnvelopeV2|SaveEnvelopeV3;
+
+  if(envelope.schemaVersion===1){
+    const v1=envelope;
     if(typeof v1.timestamp!=='string'||typeof v1.revision!=='number'||!isRecord(v1.payload))
       throw new Error('Save validation failed: V1 envelope is malformed.');
     const run=v1.payload.activeRun;
-    const migratedRun=run?migrateRunV1toV2(run):null;
-    return {schemaVersion:2,timestamp:v1.timestamp,revision:v1.revision,payload:{...v1.payload,activeRun:migratedRun}};
+    envelope={schemaVersion:2,timestamp:v1.timestamp,revision:v1.revision,payload:{...v1.payload,activeRun:run?migrateRunV1toV2(run):null}};
   }
 
-  // v2 — validate shape
-  const verdict=validateSaveShape(raw);
+  if(envelope.schemaVersion===2){
+    const v2=envelope;
+    if(typeof v2.timestamp!=='string'||typeof v2.revision!=='number'||!isRecord(v2.payload))
+      throw new Error('Save validation failed: V2 envelope is malformed.');
+    const run=v2.payload.activeRun;
+    return {schemaVersion:3,timestamp:v2.timestamp,revision:v2.revision,payload:{...v2.payload,activeRun:run?migrateRunV2toV3(run):null}};
+  }
+
+  const verdict=validateSaveShape(envelope);
   if(!verdict.valid)throw new Error(`Save validation failed: ${verdict.errors.join(' ')}`);
-  return raw as unknown as SaveEnvelopeV2;
+  return envelope;
 }

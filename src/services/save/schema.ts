@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { SaveEnvelopeV2 } from '../../game/core/save/saveFormat';
+import type { SaveEnvelopeV3 } from '../../game/core/save/saveFormat';
 
 const affinity=z.enum(['might','tech','trick','mystic','neutral']);
 const statusId=z.enum(['strength','weaken','haste','slow','blind','fortified','exposed']);
@@ -17,10 +17,18 @@ const unit=z.object({
   flags:z.record(z.string(),z.union([z.number(),z.boolean(),z.string()])),
 });
 const deployable=z.object({id:z.string(),ownerId:z.string(),type:z.enum(['sentry','repair-drone']),remainingTurns:z.number().int(),enhanced:z.boolean(),sourceAbilityId:z.string().optional()});
+const battleEffect=z.object({
+  uid:z.string(),
+  id:z.enum(['protect','ink-mark','script','taxed']),
+  sourceUnitId:z.string(),
+  targetUnitId:z.string(),
+  expiry:z.enum(['source-turn-start','target-turn-end']),
+  remaining:z.number().int().nonnegative(),
+});
 const battle=z.object({
   id:z.string(),encounterId:z.string(),tier,units:z.record(z.string(),unit),allies:z.array(z.string()),enemies:z.array(z.string()),
   round:z.number().int(),turnOrder:z.array(z.string()),turnIndex:z.number().int(),phase:z.enum(['input','resolving','victory','defeat']),
-  deployables:z.array(deployable),recentEnemyMoves:z.record(z.string(),z.array(z.string())),
+  deployables:z.array(deployable),effects:z.array(battleEffect).default([]),recentEnemyMoves:z.record(z.string(),z.array(z.string())),
   flags:z.record(z.string(),z.union([z.number(),z.boolean(),z.string()])),coinsDelta:z.number(),availableCoins:z.number(),relicIds:z.array(z.string()),escaped:z.boolean().optional(),
 });
 const partyMember=z.object({characterId:z.string(),hp:z.number(),abilityPP:z.record(z.string(),z.number()),upgradedAbilities:z.array(z.string())});
@@ -52,5 +60,5 @@ const run=z.object({
 const profile=z.object({runsStarted:z.number().int().nonnegative(),wins:z.number().int().nonnegative(),bestScore:z.number().nonnegative(),bossesDefeated:z.number().int().nonnegative(),discoveredRelics:z.array(z.string()),discoveredEnemies:z.array(z.string()),characterUsage:z.record(z.string(),z.number().int().nonnegative())});
 const settings=z.object({masterMuted:z.boolean(),musicVolume:z.number().min(0).max(1),sfxVolume:z.number().min(0).max(1),animationSpeed:z.union([z.literal(1),z.literal(2),z.literal(3)]),reducedMotion:z.boolean()});
 
-export const SaveEnvelopeSchema=z.object({schemaVersion:z.literal(2),timestamp:z.string(),revision:z.number().int().nonnegative(),payload:z.object({activeRun:run.nullable(),profile,settings})});
-export function parseSaveEnvelope(value:unknown):SaveEnvelopeV2{return SaveEnvelopeSchema.parse(value) as SaveEnvelopeV2;}
+export const SaveEnvelopeSchema=z.object({schemaVersion:z.literal(3),timestamp:z.string(),revision:z.number().int().nonnegative(),payload:z.object({activeRun:run.nullable(),profile,settings})});
+export function parseSaveEnvelope(value:unknown):SaveEnvelopeV3{return SaveEnvelopeSchema.parse(value) as SaveEnvelopeV3;}
