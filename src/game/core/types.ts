@@ -87,6 +87,7 @@ export interface CharacterDefinition {
   displayName: string;
   affinity: Affinity;
   role: string;
+  bio: string;
   stats: Stats;
   passive: PassiveDefinition;
   abilities: string[];

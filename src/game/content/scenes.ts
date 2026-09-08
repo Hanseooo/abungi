@@ -1,4 +1,4 @@
-import { SeededRng } from '../core/rng/seededRng.js';
+import { SeededRng, hashText } from '../core/rng/seededRng.js';
 import { getEvent } from './events.js';
 
 export type SceneId =
@@ -26,7 +26,9 @@ const SCENES:SceneDefinition[]=[
   {id:'party-departure',title:'Three Cutouts, One Road',kicker:'RUN START',variants:[
     {id:'depart-a',lines:[{speaker:'Narrator',text:'Three figures step onto the painted road. Everything they spend from here matters.'}]},
     {id:'depart-b',lines:[{speaker:'Narrator',text:'The table quiets. Three cutouts lean forward, and the first route unfolds.'}]},
-  ]},
+  ],relationshipVariants:[{relationshipId:'saq-departure',requiresPartyId:'saq',companionAssetId:'character-saq',variants:[
+    {id:'depart-saq',relationshipId:'saq-departure',lines:[{speaker:'Saq',text:'Keep close. You can argue when we are somewhere safer.'}]},
+  ]}]},
   {id:'region-1-intro',title:'The First Fold',kicker:'REGION I',variants:[
     {id:'r1-a',lines:[{speaker:'Narrator',text:'Cardboard alleys rise from the table. Somewhere ahead, something hungry is waiting.'}]},
     {id:'r1-b',lines:[{speaker:'Narrator',text:'The first district is all tape, rain, and bad shortcuts. Keep some PP in reserve.'}]},
@@ -34,7 +36,9 @@ const SCENES:SceneDefinition[]=[
   {id:'region-2-intro',title:'Wrong Turns',kicker:'REGION II',variants:[
     {id:'r2-a',lines:[{speaker:'Narrator',text:'The road narrows into crooked signs and laughter that comes from the wrong direction.'}]},
     {id:'r2-b',lines:[{speaker:'Narrator',text:'Fresh paper scenery slides into place. The enemies here hit faster and lie better.'}]},
-  ]},
+  ],relationshipVariants:[{relationshipId:'saq-region',requiresPartyId:'saq',companionAssetId:'character-saq',variants:[
+    {id:'r2-saq',relationshipId:'saq-region',lines:[{speaker:'Saq',text:'New district, same bad habits. Stay where I can reach you.'}]},
+  ]}]},
   {id:'region-3-intro',title:'Behind the Gate',kicker:'REGION III',variants:[
     {id:'r3-a',lines:[{speaker:'Narrator',text:'Metal braces clamp onto the stage. The final route has fewer places to hide.'}]},
     {id:'r3-b',lines:[{speaker:'Narrator',text:'The last backdrop locks upright. Every saved item suddenly feels heavier.'}]},
@@ -61,7 +65,9 @@ const SCENES:SceneDefinition[]=[
   {id:'boss-warden-intro',title:'The Warden',kicker:'FINAL BOSS',focusAssetId:'boss-warden',variants:[
     {id:'warden-a',lines:[{speaker:'Warden',text:'Unauthorized movement ends here.'}]},
     {id:'warden-b',lines:[{speaker:'Warden',text:'Route privilege revoked.'}]},
-  ]},
+  ],relationshipVariants:[{relationshipId:'saq-warden',requiresPartyId:'saq',companionAssetId:'character-saq',variants:[
+    {id:'warden-saq',relationshipId:'saq-warden',lines:[{speaker:'Warden',text:'Order is maintained.'},{speaker:'Saq',text:'Order should protect people.'}]},
+  ]}]},
   {id:'event-arrival',title:'Roadside Event',kicker:'EVENT',variants:[
     {id:'event-generic-a',lines:[{speaker:'Narrator',text:'Something on the roadside asks for a decision before the route continues.'}]},
   ]},
@@ -126,8 +132,8 @@ const EVENT_ARRIVAL_LINES:Record<string,SceneVariant[]> = {
     {id:'locker-b',lines:[{speaker:'Narrator',text:'That hinge looks ready to charge somebody in blood.'}]},
   ],
   'street-game': [
-    {id:'cups-a',lines:[{speaker:'Stranger',text:'Three cups. Five coins. The odds are written down because I am not hiding them.'}]},
-    {id:'cups-b',lines:[{speaker:'Stranger',text:'Watch the cups, not my hands. Or watch my hands. Your wager.'}]},
+    {id:'wheel-a',lines:[{speaker:'Stranger',text:'Pick a stake. The odds are written on the cardboard.'}]},
+    {id:'wheel-b',lines:[{speaker:'Stranger',text:'The wheel turns once. Decide what you can afford to lose.'}]},
   ],
   'repair-bench': [
     {id:'repair-a',lines:[{speaker:'Narrator',text:'The bench still hums. There is enough charge for one useful decision.'}]},
@@ -137,10 +143,26 @@ const EVENT_ARRIVAL_LINES:Record<string,SceneVariant[]> = {
     {id:'quiet-a',lines:[{speaker:'Narrator',text:'No ambush. No vendor. No trick. Just a quiet corner and a minute to spend.'}]},
     {id:'quiet-b',lines:[{speaker:'Narrator',text:'The route leaves a little empty space between bad ideas.'}]},
   ],
+  'swap-meet': [
+    {id:'swap-a',lines:[{speaker:'Trader',text:'Two things for one. Pick what you can spare.'}]},
+    {id:'swap-b',lines:[{speaker:'Narrator',text:'The trader turns your pack upside down with a glance.'}]},
+  ],
+  'the-press': [
+    {id:'press-a',lines:[{speaker:'Narrator',text:'One relic enters. Read the odds before you pull the lever.'}]},
+    {id:'press-b',lines:[{speaker:'Narrator',text:'The rollers do not promise to give anything back.'}]},
+  ],
+  'sparring-yard': [
+    {id:'training-a',lines:[{speaker:'Trainer',text:'The lesson costs twenty-two coins. The bruises are included.'}]},
+    {id:'training-b',lines:[{speaker:'Narrator',text:'A chalk circle waits for someone with a move to improve.'}]},
+    {id:'training-saq',lines:[{speaker:'Saq',text:'Watch the footwork, not the fist. One repetition, done properly.'}]},
+  ],
+  'fourth-chair': [
+    {id:'recruitment-a',lines:[{speaker:'Narrator',text:'A fourth chair waits beside the road. Only three can travel on.'}]},
+    {id:'recruitment-b',lines:[{speaker:'Narrator',text:'Two strangers offer to take someone\'s place, not erase the journey.'}]},
+  ],
 };
 
 const sceneMap=new Map(SCENES.map(scene=>[scene.id,scene]));
-function hash(text:string):number{let h=2166136261;for(const c of text){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
 export function resolveScene(sceneId:SceneId,context:SceneContext):ResolvedScene{
   const scene=sceneMap.get(sceneId);if(!scene)throw new Error(`Unknown scene id: ${sceneId}`);
   const relationship=scene.relationshipVariants?.find(entry=>context.partyIds.includes(entry.requiresPartyId));
@@ -148,7 +170,7 @@ export function resolveScene(sceneId:SceneId,context:SceneContext):ResolvedScene
   const event=context.eventId&&sceneId==='event-arrival'?getEvent(context.eventId):undefined;
   const eventPool=event?EVENT_ARRIVAL_LINES[event.id]:undefined;
   const pool=relationship?.variants??eliteOverride?.variants??eventPool??scene.variants;
-  const rng=new SeededRng((context.seed^hash(`${sceneId}:${context.regionIndex}:${context.encounterId??''}:${context.eventId??''}`))>>>0);
+  const rng=new SeededRng((context.seed^hashText(`${sceneId}:${context.regionIndex}:${context.encounterId??''}:${context.eventId??''}`))>>>0);
   const selected=rng.pick(pool);
   return {
     ...selected,
@@ -163,3 +185,9 @@ export function resolveScene(sceneId:SceneId,context:SceneContext):ResolvedScene
 }
 
 export function regionSceneId(regionIndex:number):SceneId{return regionIndex<=0?'region-1-intro':regionIndex===1?'region-2-intro':'region-3-intro';}
+
+export const ALL_SCENE_VARIANTS:SceneVariant[]=[
+  ...SCENES.flatMap(scene=>[...scene.variants,...(scene.relationshipVariants??[]).flatMap(entry=>entry.variants)]),
+  ...Object.values(ELITE_SCENE_OVERRIDES).flatMap(entry=>entry.variants),
+  ...Object.values(EVENT_ARRIVAL_LINES).flat(),
+];
