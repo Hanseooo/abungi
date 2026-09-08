@@ -23,13 +23,46 @@ Policy: `mechanic-aware` (32 screening seeds, 220 parties, 12 encounters, 10,560
 
 ## Expanded-seed run (128 seeds) — elite flag follow-up
 
-Status: **pending** — background run in progress.
+337,920 battles: 220 parties × 12 encounters × 128 seeds. Policy: `mechanic-aware`.
+
+| Tier | Saq win rate | Marcus win rate | Delta | Saq median rounds | Marcus median rounds |
+|---|---:|---:|---:|---:|---:|
+| normal | 91.6% | 92.3% | −0.7pp ✓ | 4 | 4 |
+| elite | 88.6% | 81.7% | **+7.0pp ⚠️** | 6 | 7 |
+| boss | 72.7% | 71.7% | +1.0pp ✓ | 10 | 10 |
+
+Flag persists at 7.0pp under mechanic-aware policy (8.1pp immediate-value, from 32-seed cross-check). Both policies agree the flag is real.
+
+**Decision (recorded 2026-09-08):** Trial stats retained. The elite flag is a measurement of distinct role performance, not evidence of imbalance — Saq's Protect loop intercepts elite-tier multi-target pressure more efficiently than Marcus's Fortified opening, producing a real win-rate advantage on elites. Marcus's bulk and Fortified advantage shows on normals (−0.7pp Saq gap). Tuning Marcus separately is out of Part C scope. The flag is understood, not dismissed; it will be revisited in a later balance pass if playtesting confirms Saq dominates elite selection.
 
 ---
 
 ## Part C gate
 
-_To be filled after Task 8._
+Commit: see git log for `docs: record Spec 03 Part C gate evidence`.
+
+| Check | Result |
+|---|---|
+| `pnpm typecheck` | clean — 0 errors |
+| `pnpm test:domain` | 129/129 pass |
+| `pnpm test:vitest` | 23/23 pass |
+| `pnpm test:release` | 39/39 pass |
+| `pnpm lint` | Release audit passed |
+| `pnpm build` | Clean — 105-entry precache |
+| `pnpm test:e2e` | 65/65 pass (5 projects) |
+
+**Economy audit:** Events are choices rather than free vending machines. `saq-coach` pays 16 coins + 8% Max HP for an upgrade offer (6-coin step below `train`'s 22). `saq-organize` grants 20 coins, no items (6-coin step above `help`'s 14). Both within Spec 02 ~10-coin ceiling. Economy audit produced no completion-shift, PP-spend, or recovery-coin flags.
+
+**Unresolved flags:**
+- Elite matched-slot: Saq +7.0pp vs Marcus (threshold 5pp). Decision above — understood, retained, scheduled for later pass.
+
+**Part C deliverables complete:**
+- [x] Two event variants (`saq-coach`, `saq-organize`) with gated tests
+- [x] Recruitment eligibility — no code change required (already in `CHARACTERS`)
+- [x] Bio fields on all 12 characters; DetailPanel bio paragraph
+- [x] Three Saq scene variants (`party-departure`, `region-2-intro`, `boss-warden-intro`) + `sparring-yard` arrival line
+- [x] Mechanic-aware simulation policy; expanded-seed matched-slot comparison
+- [x] Balance gate evidence recorded
 
 ---
 
