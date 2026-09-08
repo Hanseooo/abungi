@@ -13,7 +13,8 @@ import { calculateDamage } from './damage.js';
 import { chooseEnemyMove, chooseEnemyTargets } from './enemyAi.js';
 import { livingTargets, validatePlayerCommand } from './actions.js';
 import { previewItemPp } from '../progression/itemRecovery.js';
-import { clearAllEffects, clearEffectsForUnit, tickSourceTurnStart, tickTargetTurnEnd } from './battleEffects.js';
+import { addEffect, clearAllEffects, clearEffectsForUnit, EFFECT_LIFETIMES, tickSourceTurnStart, tickTargetTurnEnd } from './battleEffects.js';
+import { applyIncomingEffects } from './interception.js';
 
 
 const clone = <T>(value:T):T => JSON.parse(JSON.stringify(value)) as T;
@@ -158,6 +159,8 @@ function damageOne(
   const wasAlive=target.alive;
   let result=calculateDamage({attacker:actor,defender:target,power,moveAffinity:affinity,rng,outgoingMultiplier:(opts?.outgoing??1)*relicAffinityBonus(state,actor,affinity)});
   if(target.side==='ally'&&state.relicIds.includes('cardboard-plate')&&!state.flags.cardboardPlateUsed){state.flags.cardboardPlateUsed=true;result={...result,amount:Math.max(1,Math.round(result.amount*0.65))};}
+  // Hostile direct hits only. HP costs, healing and friendly effects never reach this stage.
+  if(target.side!==actor.side&&target.side==='ally')result={...result,amount:applyIncomingEffects(state,actor,target,result.amount,events)};
   setHp(target,target.hp-result.amount);
   events.push({type:'hit',targetId:target.id,heavy:power>=100},{type:'damage',targetId:target.id,amount:result.amount,critical:result.critical,affinity:result.affinity});
   if(result.critical&&actor.side==='ally'&&state.relicIds.includes('lucky-centavo')&&!state.flags.luckyCentavoUsed){state.flags.luckyCentavoUsed=true;awardCoins(state,5,events);}
@@ -231,6 +234,11 @@ function prepareAbilityContext(state:BattleState,actor:BattleUnit,ability:Abilit
       if(!actor.flags.houseEdgeRefunded) { actor.abilityPP![ability.id]=Math.min(ability.maxPP,actor.abilityPP![ability.id]+1);actor.flags.houseEdgeRefunded=true;events.push({type:'message',text:'House Edge refunds 1 PP.'}); }
     }
   }
+  if(ability.id==='dismissed'&&Number(actor.flags.readyTurns??0)>0) {
+    ctx.damagePowerOverride=upgradedPower(actor,ability,ability.effects.find(effect=>effect.kind==='damage')!.power)+BALANCE.saq.dismissedReadyPower;
+    actor.flags.readyTurns=0;
+    events.push({type:'ready',actorId:actor.id,active:false},{type:'message',text:'Ready spent on Dismissed.'});
+  }
   if(actor.sourceId==='yatords') ctx.outgoing*=1+Number(actor.flags.momentum??0)*BALANCE.yMomentumDamagePerStack;
   return ctx;
 }
@@ -285,6 +293,16 @@ function resolveEffects(
     if(effect.kind==='heal') { for(const id of ids){const target=state.units[id];if(target)healOne(state,actor,target,effect.percentMaxHp,ability,events,effect.mechanicId);}continue; }
     if(effect.kind==='cleanse') { for(const id of ids){const target=state.units[id];if(target)cleanseOne(target,effect.count,events);}continue; }
     if(effect.kind==='status') { for(const id of ids){const target=state.units[id];if(!target)continue;const shared=passesSharedMoveAccuracy(actor,target,ability,context,rng,events);if(shared===false)continue;statusOne(state,actor,target,ability,effect,rng,events,shared===true||context.cannotMiss);}continue; }
+    if(effect.kind==='applyEffect') {
+      for(const id of ids) {
+        const target=state.units[id]; if(!target?.alive) continue;
+        const shared=passesSharedMoveAccuracy(actor,target,ability,context,rng,events); if(shared===false) continue;
+        const lifetime=EFFECT_LIFETIMES[effect.effectId];
+        const instance=addEffect(state,{id:effect.effectId,sourceUnitId:actor.id,targetUnitId:target.id,...lifetime});
+        events.push({type:'effectApplied',effectId:effect.effectId,sourceId:actor.id,targetId:target.id,remaining:instance.remaining});
+      }
+      continue;
+    }
     if(effect.kind==='damage') {
       const hitCount=effect.hits??1;
       for(let hit=0;hit<hitCount;hit++) {
@@ -296,6 +314,7 @@ function resolveEffects(
           if(effect.mechanicId==='boarding-rush' && target.hp/target.maxHp<0.5) outgoing*=1.25;
           if(effect.mechanicId==='pedal-strike' && effectiveSpeed(actor)>effectiveSpeed(target)) outgoing*=1.15;
           if(effect.mechanicId==='breakaway') power+=25*Number(actor.flags.momentum??0);
+          if(effect.mechanicId==='corrective-action'&&(target.statuses.some(status=>['weaken','slow','blind','exposed'].includes(status.id))||state.effects.some(fx=>fx.id==='ink-mark'&&fx.targetUnitId===target.id)))power+=BALANCE.saq.correctiveActionBonusPower;
           const drain=effect.mechanicId==='life-drain'?(upgraded(actor,ability!)?0.45:0.35):effect.mechanicId==='enemy-life-drain'?0.35:0;
           const shared=passesSharedMoveAccuracy(actor,target,ability,context,rng,events);if(shared===false)continue;
           const result=damageOne(state,actor,target,power,ability?.affinity ?? actor.affinity,rng,events,{cannotMiss:shared===true||context.cannotMiss,accuracy:shared===undefined?effect.accuracy??ability?.accuracy:undefined,outgoing,onHitHealPercent:drain});
@@ -447,6 +466,8 @@ export function resolveBattleCommand(input:BattleState,command:BattleCommand,rng
   }
   tickOnlyExisting(actor,before,events);
   tickTargetTurnEnd(state,actor.id,events);
+  const readyLeft=Number(actor.flags.readyTurns??0);
+  if(readyLeft>0){actor.flags.readyTurns=readyLeft-1;if(readyLeft-1<=0){delete actor.flags.readyTurns;events.push({type:'ready',actorId:actor.id,active:false});}}
   if(checkOutcome(state,events)) return {nextState:state,events};
   summonWardenDrone(state,events);
   advanceIndex(state);return advanceAutomaticTurns(state,rng,events);
