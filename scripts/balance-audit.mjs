@@ -4,7 +4,7 @@ import { createBattle, resolveBattleCommand } from '../.domain-build/core/combat
 import { validatePlayerCommand } from '../.domain-build/core/combat/actions.js';
 import { affinityMultiplier } from '../.domain-build/core/combat/affinity.js';
 import { CHARACTERS, getAbility, getCharacter } from '../.domain-build/content/characters.js';
-import { ENCOUNTERS } from '../.domain-build/content/enemies.js';
+import { ENCOUNTERS, getEnemy } from '../.domain-build/content/enemies.js';
 
 function combinations(values,k){const out=[];const walk=(start,pick)=>{if(pick.length===k){out.push([...pick]);return;}for(let i=start;i<=values.length-(k-pick.length);i++){pick.push(values[i]);walk(i+1,pick);pick.pop();}};walk(0,[]);return out;}
 const parties=combinations(CHARACTERS.map(c=>c.id),3);
@@ -80,7 +80,7 @@ function scoreAbility(battle,actor,ability,targetId){
   return score;
 }
 
-function chooseCommand(battle){
+function chooseImmediateValue(battle){
   const actor=battle.units[battle.turnOrder[battle.turnIndex]];
   if(!actor||actor.side!=='ally')throw new Error('Expected player input turn');
   const character=getCharacter(actor.sourceId);const candidates=[];
@@ -95,6 +95,41 @@ function chooseCommand(battle){
   return candidates[0].command;
 }
 
+/** Whom the enemy AI is most likely to hit next: it favours the lowest HP fraction 65% of the time. */
+function likelyEnemyTarget(battle){
+  return living(battle,'ally').sort((a,b)=>hpRatio(a)-hpRatio(b))[0];
+}
+
+/** Enemy damage headroom, learned from the enemy definitions the player can already read. */
+function worstIncomingPower(battle){
+  return Math.max(0,...living(battle,'enemy').flatMap(unit=>getEnemy(unit.sourceId).moves.flatMap(move=>move.effects.filter(e=>e.kind==='damage').map(e=>e.power))));
+}
+
+function chooseMechanicAware(battle){
+  const actor=battle.units[battle.turnOrder[battle.turnIndex]];
+  if(actor.sourceId==='saq'){
+    const threatened=likelyEnemyTarget(battle);
+    const linked=battle.effects.some(fx=>fx.id==='protect'&&fx.sourceUnitId===actor.id);
+    const ppLeft=actor.abilityPP['take-your-seat']??0;
+    const worst=worstIncomingPower(battle);
+    if(!linked&&ppLeft>0&&threatened&&threatened.id!==actor.id&&hpRatio(threatened)<0.62&&worst>=50){
+      return {kind:'skill',actorId:actor.id,abilityId:'take-your-seat',targetIds:[threatened.id]};
+    }
+    if(Number(actor.flags.readyTurns??0)>0&&(actor.abilityPP['dismissed']??0)>0){
+      const foe=living(battle,'enemy').sort((a,b)=>hpRatio(a)-hpRatio(b))[0];
+      if(foe)return {kind:'skill',actorId:actor.id,abilityId:'dismissed',targetIds:[foe.id]};
+    }
+  }
+  return chooseImmediateValue(battle);
+}
+
+const POLICIES={
+  'immediate-value':chooseImmediateValue,
+  'mechanic-aware':chooseMechanicAware,
+};
+const POLICY_NAME=process.env.SPEC03_POLICY??'mechanic-aware';
+const chooseCommand=battle=>POLICIES[POLICY_NAME]?.(battle)??chooseImmediateValue(battle);
+
 const ROUND_CAP=30;
 const COMMAND_CAP=180;
 function regionFor(encounter){if(encounter.id==='boss-jonlow')return 0;if(encounter.id==='boss-klyde')return 1;if(encounter.id==='boss-warden')return 2;return encounter.tier==='elite'?1:0;}
@@ -104,6 +139,18 @@ function simulate(party,encounter,seed){
   const allies=battle.allies.map(id=>battle.units[id]);
   const outcome=battle.escaped?'escape':battle.phase==='victory'?'win':battle.phase==='defeat'?'defeat':'timeout';
   return {outcome,won:outcome==='win',rounds:battle.round,actions,survivors:allies.filter(a=>a.alive).length,hpRatio:allies.reduce((s,a)=>s+a.hp/a.maxHp,0)/allies.length};
+}
+
+if(process.env.SPEC03_TRACE){
+  const rng=new SeededRng(Number(process.env.SPEC03_TRACE));
+  let battle=createBattle(['saq','hans','marcus'],'normal-fastlane',rng,{coins:30,regionIndex:0});
+  while(battle.phase==='input'&&battle.round<=ROUND_CAP){
+    const command=chooseCommand(battle);
+    console.log(`R${battle.round} ${battle.units[command.actorId].displayName}: ${command.abilityId??command.kind}`);
+    battle=resolveBattleCommand(battle,command,rng).nextState;
+  }
+  console.log(`outcome=${battle.phase} effects=${JSON.stringify(battle.effects)}`);
+  process.exit(0);
 }
 
 const records=[];const seeds=[101,202,303,404];
