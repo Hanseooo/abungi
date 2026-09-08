@@ -35,4 +35,4 @@ _To be filled after Task 8._
 
 ## Recruitment integration
 
-Not applicable: no event definition carries a `recruit` effect as of this revision. Spec 03 §6 does not build recruitment, so Saq's candidate-pool entry is deferred to whichever slice ships it.
+Recruitment is implemented via `fourth-chair`. `deriveEventOffers` at `src/game/core/progression/events.ts:36` uses `CHARACTERS.filter(character => !run.party.some(...))`, which includes every defined character not already in the party. Saq is defined in `CHARACTERS`, so he is already in the candidate pool. No code change required.
