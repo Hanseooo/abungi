@@ -29,6 +29,12 @@ export const BALANCE = {
   leandreClearanceCoinCost: 15,
   yMomentumDamagePerStack: 0.08,
   maxMomentum: 3,
+  // Spec 03 Part B trial values. Unvalidated tuning hypotheses; Part C measures them.
+  saq: {
+    classMonitorPrevention: 5,
+    correctiveActionBonusPower: 12,
+    dismissedReadyPower: 35,
+  },
   shopBaseOffers: 4,
   regionCount: 3,
   routeStagesBeforeBoss: 6,
