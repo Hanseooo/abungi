@@ -39,6 +39,7 @@ export function hpAtBeat(startHp:Record<string,number>,beats:CombatBeat[],index:
   const hp={...startHp};
   for(let at=0;at<=index&&at<beats.length;at+=1)for(const event of beats[at].events){
     if(event.type==='damage')hp[event.targetId]=Math.max(0,(hp[event.targetId]??0)-event.amount);
+    else if(event.type==='transfer')hp[event.toId]=Math.max(0,(hp[event.toId]??0)-event.amount);
     else if(event.type==='heal')hp[event.targetId]=(hp[event.targetId]??0)+event.amount;
   }
   return hp;
@@ -50,6 +51,7 @@ export function presentedHpAtBeat(finalHp:Record<string,number>,beats:CombatBeat
   for(let at=beats.length-1;at>=0;at-=1)for(let eventIndex=beats[at].events.length-1;eventIndex>=0;eventIndex-=1){
     const event=beats[at].events[eventIndex];
     if(event.type==='damage')startHp[event.targetId]=(startHp[event.targetId]??0)+event.amount;
+    else if(event.type==='transfer')startHp[event.toId]=(startHp[event.toId]??0)+event.amount;
     else if(event.type==='heal')startHp[event.targetId]=Math.max(0,(startHp[event.targetId]??0)-event.amount);
   }
   return hpAtBeat(startHp,beats,index);
@@ -64,7 +66,7 @@ export function combatBeatDuration(beat:CombatBeat,settings:Pick<SettingsState,'
   }
   if(settings.reducedMotion)return Math.max(90,Math.round(220/settings.animationSpeed));
   if(beat.chained)return Math.round(215*combatPacing(beat)/settings.animationSpeed);
-  const impacts=beat.events.filter(event=>['damage','heal','statusApplied','summon','deployableTrigger','revive','bossPhase'].includes(event.type)).length;
+  const impacts=beat.events.filter(event=>['damage','heal','statusApplied','summon','deployableTrigger','revive','bossPhase','transfer','prevented','effectApplied'].includes(event.type)).length;
   return Math.round((410+Math.min(340,impacts*85))*combatPacing(beat)/settings.animationSpeed);
 }
 

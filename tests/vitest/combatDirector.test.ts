@@ -56,4 +56,19 @@ describe('combat HP presentation', () => {
     expect(combatDirector.combatBeatDuration(meleeAnnouncement, { animationSpeed: 2, reducedMotion: false })).toBe(163);
     expect(combatDirector.combatBeatDuration(heavyImpact, { animationSpeed: 1, reducedMotion: false })).toBe(653);
   });
+
+  it('moves the protector HP bar for a transfer event', () => {
+    const events: CombatEvent[] = [
+      { type: 'actionStart', actorId: 'enemy-0-wisp', label: 'Flicker', side: 'enemy' },
+      { type: 'hit', targetId: 'ally-1-hans' },
+      { type: 'damage', targetId: 'ally-1-hans', amount: 20, critical: false, affinity: 'normal' },
+      { type: 'transfer', fromId: 'ally-1-hans', toId: 'ally-0-saq', amount: 5 },
+    ];
+    const beats = combatDirector.buildCombatBeats(events);
+    const finalHp = { 'ally-0-saq': 111, 'ally-1-hans': 72 };
+    const atStart = combatDirector.presentedHpAtBeat(finalHp, beats, 0);
+    expect(atStart).toEqual({ 'ally-0-saq': 116, 'ally-1-hans': 92 });
+    const atEnd = combatDirector.presentedHpAtBeat(finalHp, beats, beats.length - 1);
+    expect(atEnd).toEqual(finalHp);
+  });
 });
