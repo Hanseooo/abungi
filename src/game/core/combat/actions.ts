@@ -2,6 +2,7 @@ import type { AbilityDefinition, BattleCommand, BattleState, BattleUnit } from '
 import { getAbility, getCharacter } from '../../content/characters.js';
 import { getItem } from '../../content/items.js';
 import { NEGATIVE_STATUSES } from './status.js';
+import { findEffect } from './battleEffects.js';
 import { BALANCE } from '../../balance/constants.js';
 import { previewItemPp } from '../progression/itemRecovery.js';
 
@@ -87,6 +88,13 @@ export function validatePlayerCommand(state:BattleState, command:BattleCommand):
   }
   if ((ability.id === 'sentry-unit' || ability.id === 'repair-drone') && state.deployables.filter(d=>d.ownerId===actor.id).length >= BALANCE.maxDeployables) {
     return {legal:false,reason:'Deployable slots are full.'};
+  }
+  const protectEffect=ability.effects.find(effect=>effect.kind==='applyEffect'&&effect.effectId==='protect');
+  if(protectEffect){
+    const targetId=command.targetIds[0];
+    if(targetId===actor.id) return {legal:false,reason:'Protect must cover another ally, not its caster.'};
+    const existing=targetId?findEffect(state,'protect',targetId):undefined;
+    if(existing&&existing.sourceUnitId===actor.id) return {legal:false,reason:'That ally is already protected until your next turn.'};
   }
   return validateAbilityTargets(state,actor,ability,command.targetIds);
 }

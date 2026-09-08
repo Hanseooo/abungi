@@ -62,3 +62,73 @@ test('an unlinked ally is untouched by the pipeline', () => {
   assert.equal(recipientDamage, 40, 'Saq as an AoE target takes his own ordinary hit');
   assert.equal(state.effects.length, 1);
 });
+
+import { SeededRng } from '../../.domain-build/core/rng/seededRng.js';
+import { createBattle, resolveBattleCommand } from '../../.domain-build/core/combat/battleEngine.js';
+
+const saqParty = (encounter = 'normal-fastlane', seed = 777) =>
+  createBattle(['saq','hans','marcus'], encounter, new SeededRng(seed), { coins: 30 });
+
+test('Take Your Seat links Saq to a chosen ally and cannot target himself', () => {
+  const rng = new SeededRng(777);
+  let battle = saqParty();
+  const saqId = battle.allies.find(id => battle.units[id].sourceId === 'saq');
+  const hansId = battle.allies.find(id => battle.units[id].sourceId === 'hans');
+  // Fast-forward to Saq's turn by guarding with whoever acts first.
+  while (battle.turnOrder[battle.turnIndex] !== saqId) {
+    battle = resolveBattleCommand(battle, { kind: 'guard', actorId: battle.turnOrder[battle.turnIndex] }, rng).nextState;
+  }
+  const resolution = resolveBattleCommand(battle, { kind: 'skill', actorId: saqId, abilityId: 'take-your-seat', targetIds: [hansId] }, rng);
+  const link = resolution.nextState.effects.find(effect => effect.id === 'protect');
+  assert.ok(link, 'the skill applies a protect link');
+  assert.equal(link.sourceUnitId, saqId);
+  assert.equal(link.targetUnitId, hansId);
+  assert.ok(resolution.events.some(e => e.type === 'effectApplied' && e.effectId === 'protect'));
+});
+
+test('Ready expires at the end of Saq next completed turn if it is not spent', () => {
+  const rng = new SeededRng(777);
+  let battle = saqParty();
+  const saqId = battle.allies.find(id => battle.units[id].sourceId === 'saq');
+  battle.units[saqId].flags.readyTurns = 1;
+  while (battle.turnOrder[battle.turnIndex] !== saqId) {
+    battle = resolveBattleCommand(battle, { kind: 'guard', actorId: battle.turnOrder[battle.turnIndex] }, rng).nextState;
+  }
+  battle = resolveBattleCommand(battle, { kind: 'guard', actorId: saqId }, rng).nextState;
+  assert.equal(Number(battle.units[saqId].flags.readyTurns ?? 0), 0, 'Ready survives the start of that turn, then expires when it completes');
+});
+
+test('Dismissed consumes Ready for extra power even when it misses', () => {
+  const rng = new SeededRng(777);
+  let battle = saqParty();
+  const saqId = battle.allies.find(id => battle.units[id].sourceId === 'saq');
+  battle.units[saqId].flags.readyTurns = 1;
+  while (battle.turnOrder[battle.turnIndex] !== saqId) {
+    battle = resolveBattleCommand(battle, { kind: 'guard', actorId: battle.turnOrder[battle.turnIndex] }, rng).nextState;
+  }
+  const foeId = battle.enemies.find(id => battle.units[id].alive);
+  battle = resolveBattleCommand(battle, { kind: 'skill', actorId: saqId, abilityId: 'dismissed', targetIds: [foeId] }, rng).nextState;
+  assert.equal(Number(battle.units[saqId].flags.readyTurns ?? 0), 0);
+});
+
+import { validatePlayerCommand } from '../../.domain-build/core/combat/actions.js';
+
+test('Protect cannot target Saq himself', () => {
+  const battle = saqParty();
+  const saqId = battle.allies.find(id => battle.units[id].sourceId === 'saq');
+  battle.turnIndex = battle.turnOrder.indexOf(saqId);
+  const verdict = validatePlayerCommand(battle, { kind: 'skill', actorId: saqId, abilityId: 'take-your-seat', targetIds: [saqId] });
+  assert.equal(verdict.legal, false);
+  assert.match(verdict.reason, /another ally/i);
+});
+
+test('refreshing an identical Protect with no added lifetime is rejected', () => {
+  const battle = saqParty();
+  const saqId = battle.allies.find(id => battle.units[id].sourceId === 'saq');
+  const hansId = battle.allies.find(id => battle.units[id].sourceId === 'hans');
+  battle.turnIndex = battle.turnOrder.indexOf(saqId);
+  addEffect(battle, { id: 'protect', sourceUnitId: saqId, targetUnitId: hansId, expiry: 'source-turn-start', remaining: 1 });
+  const verdict = validatePlayerCommand(battle, { kind: 'skill', actorId: saqId, abilityId: 'take-your-seat', targetIds: [hansId] });
+  assert.equal(verdict.legal, false);
+  assert.match(verdict.reason, /already protected/i);
+});
