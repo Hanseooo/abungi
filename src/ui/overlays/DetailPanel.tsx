@@ -4,7 +4,7 @@ import { useAppStore } from '../../app/appStore';
 import { getAbility, getCharacter } from '../../game/content/characters';
 import { getEnemy } from '../../game/content/enemies';
 import { getItem } from '../../game/content/items';
-import { STATUS_GUIDE_MAP } from '../../game/content/guide';
+import { STATUS_GUIDE_MAP, EFFECT_GUIDE_MAP } from '../../game/content/guide';
 import { AffinityMark } from '../components/AffinityMark';
 import { PaperButton } from '../components/PaperButton';
 
@@ -24,6 +24,9 @@ export function DetailPanel({overlay}:{overlay:Exclude<OverlayState,null|{kind:'
   } else if(overlay.kind==='item'){
     const item=getItem(overlay.itemId);title=item.name;kicker=`${item.rarity.toUpperCase()} ITEM`;
     body=<><div className="detail-hero"><span className={`rarity-stamp rarity-${item.rarity}`}>{item.rarity.toUpperCase()}</span><TargetLabel target={item.target}/><span className="detail-chip">BASE {item.price} COINS</span></div><p className="detail-lead">{item.description}</p><div className="rule-note"><strong>Stacking</strong><p>Status items refresh the same status rather than multiplying it. Different buffs can coexist.</p></div></>;
+  } else if(overlay.kind==='effect'){
+    const effect=EFFECT_GUIDE_MAP.get(overlay.effectId)!;title=effect.name;kicker='EFFECT';
+    body=<><div className={`status-detail-mark effect-${effect.id}`}>{effect.short}</div><p className="detail-lead">{effect.description}</p><ul className="detail-list"><li><strong>Lasts:</strong> {effect.anchor}</li><li><strong>Triggers on:</strong> {effect.trigger}</li></ul><div className="rule-note"><strong>Not a status</strong><p>This effect belongs to whoever applied it. Buff-duration bonuses do not extend it, and it ends if either side of the link is knocked out.</p></div></>;
   } else {
     const enemy=getEnemy(overlay.enemyId);title=enemy.displayName;kicker=enemy.tier.toUpperCase();
     body=<><div className="detail-hero"><AffinityMark affinity={enemy.affinity}/><span className="detail-chip">HP {enemy.stats.maxHp}</span><span className="detail-chip">POW {enemy.stats.power}</span><span className="detail-chip">GRD {enemy.stats.guard}</span><span className="detail-chip">SPD {enemy.stats.speed}</span></div><p className="detail-lead">Visible profile only. Abungi never reveals which move this enemy will use next.</p><h3>Known move set</h3><ul className="detail-list">{enemy.moves.map(move=><li key={move.id}><strong>{move.name}</strong> · {move.affinity.toUpperCase()}</li>)}</ul></>;

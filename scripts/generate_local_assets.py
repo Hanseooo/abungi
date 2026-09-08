@@ -10,7 +10,7 @@ for p in (CUT,BG,ICON,AUDIO): p.mkdir(parents=True,exist_ok=True)
 paper='#F2E7D5'; ink='#1E1A17'; cardboard='#C7A679'
 palette=['#A9463B','#247B78','#C9962E','#6E7B4B','#6C4A78','#43546A','#8C5A3C','#4A715A']
 assets=[
-('character-earl',0,'medic'),('character-greg',2,'cutlass'),('character-michael',5,'rifle'),('character-marcus',1,'shield'),('character-hans',3,'wrench'),('character-yeeho',4,'dice'),('character-jiro',2,'pan'),('character-nathaniel',4,'shade'),('character-yatords',1,'wheel'),('character-daboy',6,'bottle'),('character-leandre',3,'coins'),
+('character-earl',0,'medic'),('character-greg',2,'cutlass'),('character-michael',5,'rifle'),('character-marcus',1,'shield'),('character-hans',3,'wrench'),('character-yeeho',4,'dice'),('character-jiro',2,'pan'),('character-nathaniel',4,'shade'),('character-yatords',1,'wheel'),('character-daboy',6,'bottle'),('character-leandre',3,'coins'),('character-saq',1,'pointer'),
 ('enemy-scrapper',6,'fists'),('enemy-road-dog',0,'speed'),('enemy-cutpurse',4,'knife'),('enemy-smokehead',3,'smoke'),('enemy-hexling',4,'shade'),('enemy-wisp',4,'wisp'),('enemy-dronelet',1,'drone'),('enemy-bulwark-bot',5,'shield'),('enemy-backstreet-medic',3,'medic'),('enemy-tin-brute',6,'brute'),
 ('elite-broker',4,'coins'),('elite-ironclad',5,'brute'),('elite-night-maw',4,'maw'),('boss-jonlow',2,'glutton'),('boss-klyde',0,'chaos'),('boss-warden',5,'warden')]
 
@@ -37,6 +37,7 @@ props={
  'glutton':'<ellipse cx="112" cy="125" rx="63" ry="58"/><path d="M71 128q41 29 82 0"/>',
  'chaos':'<path d="M55 76l24 16-18 18 22 20-29 34M169 72l-24 20 19 18-23 21 30 31"/>',
  'warden':'<path d="M69 65h87v24l18 22-17 81H67l-18-81 20-22z"/><path d="M91 80h42M93 104h38M111 105v63"/>',
+ 'pointer':'<path d="M143 88l38 12-4 10-36-10z"/><rect x="132" y="96" width="14" height="46" rx="3"/><path d="M126 150h30"/>',
 }
 
 def svg_asset(name,idx,prop):

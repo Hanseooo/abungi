@@ -46,7 +46,7 @@ test('local identity/audio assets cover the full playable cast and required soun
   const enemies = cutouts.filter(name => name.startsWith('enemy-'));
   const elites = cutouts.filter(name => name.startsWith('elite-'));
   const bosses = cutouts.filter(name => name.startsWith('boss-'));
-  assert.equal(characters.length, 11);
+  assert.equal(characters.length, 12);
   assert.equal(enemies.length, 10);
   assert.equal(elites.length, 3);
   assert.equal(bosses.length, 3);

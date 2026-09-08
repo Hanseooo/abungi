@@ -124,6 +124,9 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 .status-strength,.status-haste,.status-fortified { background: #cfd9a6; }
 .status-weaken,.status-slow,.status-blind,.status-exposed { background: #ddb0a8; }
 .status-empty { font-size: .62rem; color: rgba(30,26,23,.55); font-style: italic; }
+.effect-protect { background: #bcd0c4; }
+.effect-positive { border-style: dashed; }
+.effect-negative { background: #e3c6a0; }
 
 /* Meter */
 .meter { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 5px; min-width: 0; }

@@ -9,8 +9,8 @@ import { ITEMS } from '../../src/game/content/items';
 describe('release content registry', () => {
   test('contains the full v0.3 content set with no broken references', () => {
     expect(validateContent()).toEqual({ valid: true, errors: [] });
-    expect(CHARACTERS).toHaveLength(11);
-    expect(CHARACTERS.flatMap(character => character.abilities)).toHaveLength(44);
+    expect(CHARACTERS).toHaveLength(12);
+    expect(CHARACTERS.flatMap(character => character.abilities)).toHaveLength(48);
     expect(ENEMIES.length).toBeGreaterThanOrEqual(16);
     expect(EVENTS.length).toBeGreaterThanOrEqual(11);
     expect(RELICS.length).toBeGreaterThanOrEqual(16);

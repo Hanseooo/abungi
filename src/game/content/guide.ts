@@ -1,4 +1,4 @@
-import type { Affinity, StatusId } from '../core/types.js';
+import type { Affinity, BattleEffectId, StatusId } from '../core/types.js';
 import { BALANCE } from '../balance/constants.js';
 
 export interface StatusGuideEntry {id:StatusId;name:string;short:string;description:string;positive:boolean}
@@ -12,6 +12,12 @@ export const STATUS_GUIDE:StatusGuideEntry[]=[
   {id:'exposed',name:'Exposed',short:'EXPOSED',positive:false,description:`Incoming damage ×${BALANCE.status.exposedDamageMultiplier}.`},
 ];
 export const STATUS_GUIDE_MAP=new Map(STATUS_GUIDE.map(entry=>[entry.id,entry]));
+
+export interface EffectGuideEntry {id:BattleEffectId;name:string;short:string;positive:boolean;anchor:string;trigger:string;description:string}
+export const EFFECT_GUIDE:EffectGuideEntry[]=[
+  {id:'protect',name:'Protect',short:'PROT',positive:true,anchor:'Until the start of the protector’s next turn.',trigger:'The first hit that redirects a positive share of damage.',description:`The protected ally keeps half of the incoming damage. The protector takes half of that redirected half, reduced by up to ${BALANCE.saq.classMonitorPrevention} HP once per round by Class Monitor. The protector's share takes no second Guard, Fortified or relic reduction, and it can knock the protector out. Protect does not cleanse, does not stop HP costs, and does not redirect the attack's status effects.`},
+];
+export const EFFECT_GUIDE_MAP=new Map(EFFECT_GUIDE.map(entry=>[entry.id,entry]));
 
 export const AFFINITY_GUIDE:Array<{id:Affinity;name:string;beats?:Affinity;description:string}>=[
   {id:'might',name:'Might',beats:'trick',description:'Might has advantage against Trick.'},
@@ -27,5 +33,6 @@ export const MECHANIC_GUIDE=[
   {id:'guard',title:'Guard',text:`Guard costs no PP and reduces incoming damage to ${Math.round(BALANCE.guardDamageMultiplier*100)}% until that character’s next turn.`},
   {id:'pp',title:'PP attrition',text:'PP persists between encounters. Ordinary victories do not refill it, so route, item and Rest choices matter.'},
   {id:'speed',title:'Turn order',text:'Each living unit acts once per round. Speed determines order at the start of the round; mid-round Speed changes affect the next round.'},
+  {id:'ready',title:'Ready',text:'A successful Protect leaves Saq Ready. Ready lasts through the end of his next completed turn, is spent by Dismissed even on a miss, does not stack, and is lost if he is knocked out.'},
   {id:'boss',title:'Boss forms',text:'Boss affinity is rolled from a small boss-specific pool when the battle begins. It is intentionally secret before the fight and does not rewrite the boss’s authored move affinities.'},
 ];

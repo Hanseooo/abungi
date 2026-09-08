@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { CHARACTERS, getAbility, getCharacter } from '../game/content/characters';
 import { getEvent } from '../game/content/events';
 import { getItem } from '../game/content/items';
-import type { BattleCommand, CombatEvent, ProfileState, RewardSpoilsChoice, RunState, SettingsState } from '../game/core/types';
+import type { BattleCommand, BattleEffectId, CombatEvent, ProfileState, RewardSpoilsChoice, RunState, SettingsState, StatusId } from '../game/core/types';
 import { SeededRng } from '../game/core/rng/seededRng';
 import { createBattle, exportPartyFromBattle, resolveBattleCommand } from '../game/core/combat/battleEngine';
 import { validatePlayerCommand } from '../game/core/combat/actions';
@@ -15,13 +15,12 @@ import { generateShopOffers, purchaseShopOffer, type ShopOffer } from '../game/c
 import { applyEventChoice } from '../game/core/progression/events';
 import type { EventSelection } from '../game/content/events';
 import { regionSceneId, resolveScene, type ResolvedScene, type SceneId } from '../game/content/scenes';
-import type { StatusId } from '../game/core/types';
 import { DEFAULT_PROFILE, DEFAULT_SETTINGS, type SavePayload } from '../game/core/save/saveFormat';
 import { createSaveRepository } from '../services/save/createSaveRepository';
 import { combatPresentationDuration } from '../features/battle/combatDirector';
 
 export type AppScreen='title'|'party'|'route'|'battle'|'reward'|'shop'|'rest'|'event'|'results';
-export type OverlayState=null|{kind:'settings'}|{kind:'guide';section?:string}|{kind:'move';abilityId:string}|{kind:'status';statusId:StatusId}|{kind:'character';characterId:string}|{kind:'item';itemId:string}|{kind:'enemy';enemyId:string};
+export type OverlayState=null|{kind:'settings'}|{kind:'guide';section?:string}|{kind:'move';abilityId:string}|{kind:'status';statusId:StatusId}|{kind:'character';characterId:string}|{kind:'item';itemId:string}|{kind:'enemy';enemyId:string}|{kind:'effect';effectId:BattleEffectId};
 type SaveHealth='loading'|'ready'|'saving'|'error';
 const repository=createSaveRepository();
 const clone=<T>(v:T):T=>JSON.parse(JSON.stringify(v)) as T;
@@ -49,7 +48,7 @@ interface AppState{
   selectNode(id:string):Promise<void>;battleSkill(actorId:string,abilityId:string,targetIds:string[]):Promise<void>;battleGuard(actorId:string):Promise<void>;battleItem(actorId:string,itemId:string,targetIds:string[]):Promise<void>;
   claimRewardChoice(relicId?:string,upgrade?:{characterId:string;abilityId:string},spoilsId?:RewardSpoilsChoice['id']):Promise<void>;
   purchaseOffer(offerId:string):Promise<void>;leaveShop():Promise<void>;chooseRest(choice:RestChoice):Promise<void>;leaveRest():Promise<void>;chooseEvent(choiceId:string,selection?:EventSelection):Promise<void>;useFieldItem(command:FieldItemCommand):Promise<void>;discardItem(itemId:string,expectedQuantity:number):Promise<void>;finishEvent():void;
-  openSettings():void;openGuide(section?:string):void;openMoveInfo(abilityId:string):void;openStatusInfo(statusId:StatusId):void;openCharacterInfo(characterId:string):void;openItemInfo(itemId:string):void;openEnemyInfo(enemyId:string):void;closeOverlay():void;dismissScene():void;updateSettings(next:Partial<SettingsState>):Promise<void>;clearError():void;resetCorruptSave():Promise<void>;abandonRun():Promise<void>;
+  openSettings():void;openGuide(section?:string):void;openMoveInfo(abilityId:string):void;openStatusInfo(statusId:StatusId):void;openEffectInfo(effectId:BattleEffectId):void;openCharacterInfo(characterId:string):void;openItemInfo(itemId:string):void;openEnemyInfo(enemyId:string):void;closeOverlay():void;dismissScene():void;updateSettings(next:Partial<SettingsState>):Promise<void>;clearError():void;resetCorruptSave():Promise<void>;abandonRun():Promise<void>;
 }
 
 export const useAppStore=create<AppState>((set,get)=>{
@@ -272,7 +271,7 @@ export const useAppStore=create<AppState>((set,get)=>{
       }finally{set({isResolving:false});}
     },
     finishEvent(){const current=get().run;const node=current&&nodeForCurrent(current);if(get().screen!=='event'||get().isResolving||!current||!node||!current.completedNodeIds.includes(node.id)||!get().eventResult)return;set({screen:'route',eventResult:null,error:null});},
-    openSettings(){set({overlay:{kind:'settings'},error:null});},openGuide(section){set({overlay:{kind:'guide',section},error:null});},openMoveInfo(abilityId){set({overlay:{kind:'move',abilityId}});},openStatusInfo(statusId){set({overlay:{kind:'status',statusId}});},openCharacterInfo(characterId){set({overlay:{kind:'character',characterId}});},openItemInfo(itemId){set({overlay:{kind:'item',itemId}});},openEnemyInfo(enemyId){set({overlay:{kind:'enemy',enemyId}});},closeOverlay(){set({overlay:null,error:null});},dismissScene(){set(state=>({sceneQueue:state.sceneQueue.slice(1)}));},
+    openSettings(){set({overlay:{kind:'settings'},error:null});},openGuide(section){set({overlay:{kind:'guide',section},error:null});},openMoveInfo(abilityId){set({overlay:{kind:'move',abilityId}});},openStatusInfo(statusId){set({overlay:{kind:'status',statusId}});},openEffectInfo(effectId){set({overlay:{kind:'effect',effectId}});},openCharacterInfo(characterId){set({overlay:{kind:'character',characterId}});},openItemInfo(itemId){set({overlay:{kind:'item',itemId}});},openEnemyInfo(enemyId){set({overlay:{kind:'enemy',enemyId}});},closeOverlay(){set({overlay:null,error:null});},dismissScene(){set(state=>({sceneQueue:state.sceneQueue.slice(1)}));},
     async updateSettings(next){const settings={...get().settings,...next};set({settings});await persist(get().run,get().profile,settings);},
     clearError(){set({error:null,notice:null});},
     async resetCorruptSave(){await repository.clear();set({run:null,profile:clone(DEFAULT_PROFILE),settings:clone(DEFAULT_SETTINGS),corruptSaveMessage:null,saveHealth:'ready',screen:'title',overlay:null,sceneQueue:[],seenSceneKeys:[]});},
