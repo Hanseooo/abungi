@@ -56,11 +56,11 @@ for (const [label,pattern] of forbidden) pattern.test(runtimeText) ? fail(`runti
 
 const characters = (read('src/game/content/characters.ts').match(/\{ id:'[^']+', displayName:/g) ?? []).length;
 const abilities = (read('src/game/content/characters.ts').match(/ability\(\{ id:/g) ?? []).length;
-characters === 11 ? ok('11 playable characters defined') : fail(`expected 11 playable characters, found ${characters}`);
-abilities === 44 ? ok('44 playable abilities defined') : fail(`expected 44 playable abilities, found ${abilities}`);
+characters === 12 ? ok('12 playable characters defined') : fail(`expected 12 playable characters, found ${characters}`);
+abilities === 48 ? ok('48 playable abilities defined') : fail(`expected 48 playable abilities, found ${abilities}`);
 
 const cutouts = readdirSync(join(root,'public/assets/cutouts'));
-for (const [prefix,count] of [['character-',11],['enemy-',10],['elite-',3],['boss-',3]]) {
+for (const [prefix,count] of [['character-',12],['enemy-',10],['elite-',3],['boss-',3]]) {
   const found = cutouts.filter(name => name.startsWith(prefix) && name.endsWith('.svg')).length;
   found === count ? ok(`${count} ${prefix} cutouts`) : fail(`expected ${count} ${prefix} cutouts, found ${found}`);
 }
