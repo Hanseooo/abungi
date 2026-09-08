@@ -13,6 +13,8 @@ import { calculateDamage } from './damage.js';
 import { chooseEnemyMove, chooseEnemyTargets } from './enemyAi.js';
 import { livingTargets, validatePlayerCommand } from './actions.js';
 import { previewItemPp } from '../progression/itemRecovery.js';
+import { clearAllEffects, clearEffectsForUnit, tickSourceTurnStart, tickTargetTurnEnd } from './battleEffects.js';
+
 
 const clone = <T>(value:T):T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -94,7 +96,7 @@ export function createBattle(
   }
   const state:BattleState={
     id:`battle-${encounterId}-${rng.serialize().state}`, encounterId, tier:encounter.tier, units, allies, enemies,
-    round:1,turnOrder:[],turnIndex:0,phase:'input',deployables:[],recentEnemyMoves:{},flags:{},coinsDelta:0,
+    round:1,turnOrder:[],turnIndex:0,phase:'input',deployables:[],effects:[],recentEnemyMoves:{},flags:{},coinsDelta:0,
     availableCoins:options?.coins ?? 0,relicIds:[...(options?.relicIds ?? [])],
   };
   state.flags.regionIndex=regionIndex;
@@ -166,6 +168,7 @@ function damageOne(
   const killed=wasAlive&&!target.alive;
   if(killed) {
     events.push({type:'knockout',targetId:target.id});
+    clearEffectsForUnit(state,target.id,events);
     if(target.side==='ally'&&state.relicIds.includes('chalk-outline')&&!state.flags.chalkOutlineUsed){
       state.flags.chalkOutlineUsed=true;awardCoins(state,15,events);
     }
@@ -382,6 +385,7 @@ function advanceIndex(state:BattleState):void {
 function enemyMoveEffects(move:EnemyMoveDefinition):EffectDefinition[]{return move.effects;}
 
 function resolveEnemyTurn(state:BattleState,actor:BattleUnit,rng:SeededRng,events:CombatEvent[]):void {
+  tickSourceTurnStart(state,actor.id,events);
   actor.guardActive=false;
   const before=clone(actor.statuses);
   const move=chooseEnemyMove(state,actor,rng); const targets=chooseEnemyTargets(state,actor,move,rng);
@@ -390,14 +394,18 @@ function resolveEnemyTurn(state:BattleState,actor:BattleUnit,rng:SeededRng,event
   resolveEffects(state,actor,enemyMoveEffects(move),pseudo,targets,rng,events);
   const history=state.recentEnemyMoves[actor.id]??[];state.recentEnemyMoves[actor.id]=[...history,move.id].slice(-4);
   if(move.once) actor.flags.usedOnceMoves=[...new Set([...String(actor.flags.usedOnceMoves??'').split(',').filter(Boolean),move.id])].join(',');
-  tickOnlyExisting(actor,before,events);checkOutcome(state,events);summonWardenDrone(state,events);
+  tickOnlyExisting(actor,before,events);tickTargetTurnEnd(state,actor.id,events);checkOutcome(state,events);summonWardenDrone(state,events);
 }
 
 function advanceAutomaticTurns(input:BattleState,rng:SeededRng,events:CombatEvent[]):BattleResolution {
   const state=input;
   while(state.phase!=='victory'&&state.phase!=='defeat') {
     const actor=getCurrentActor(state);
-    if(actor.side==='ally'){actor.guardActive=false;state.phase='input';break;}
+    if(actor.side==='ally'){
+      const key=`turnStarted-${actor.id}-${state.round}`;
+      if(!state.flags[key]){state.flags[key]=true;tickSourceTurnStart(state,actor.id,events);}
+      actor.guardActive=false;state.phase='input';break;
+    }
     state.phase='resolving';resolveEnemyTurn(state,actor,rng,events);
     if(state.phase !== 'resolving') break;
     advanceIndex(state);
@@ -438,11 +446,13 @@ export function resolveBattleCommand(input:BattleState,command:BattleCommand,rng
     triggerDeployables(state,actor,rng,events);
   }
   tickOnlyExisting(actor,before,events);
+  tickTargetTurnEnd(state,actor.id,events);
   if(checkOutcome(state,events)) return {nextState:state,events};
   summonWardenDrone(state,events);
   advanceIndex(state);return advanceAutomaticTurns(state,rng,events);
 }
 
 export function exportPartyFromBattle(state:BattleState):PartyMemberRunState[] {
+  clearAllEffects(state);
   return state.allies.map(id=>state.units[id]).map(unit=>({characterId:unit.sourceId,hp:unit.hp,abilityPP:{...(unit.abilityPP??{})},upgradedAbilities:[...(unit.upgradedAbilities??[])]}));
 }

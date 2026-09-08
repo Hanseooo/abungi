@@ -81,3 +81,22 @@ test('clearAllEffects empties the collection without emitting events', () => {
   clearAllEffects(state);
   assert.deepEqual(state.effects, []);
 });
+
+import { SeededRng } from '../../.domain-build/core/rng/seededRng.js';
+import { createBattle, resolveBattleCommand } from '../../.domain-build/core/combat/battleEngine.js';
+
+test('a new battle starts with an empty effect collection', () => {
+  const battle = createBattle(['earl','hans','marcus'], 'normal-fastlane', new SeededRng(777), { coins: 30 });
+  assert.deepEqual(battle.effects, []);
+});
+
+test('a link survives the turn on which it was applied and is not expired by other units acting', () => {
+  const rng = new SeededRng(777);
+  let battle = createBattle(['earl','hans','marcus'], 'normal-fastlane', rng, { coins: 30 });
+  const actorId = battle.turnOrder[battle.turnIndex];
+  const otherAllyId = battle.allies.find(id => id !== actorId);
+  battle.effects.push({ uid: 'fx-test', id: 'protect', sourceUnitId: actorId, targetUnitId: otherAllyId, expiry: 'source-turn-start', remaining: 1 });
+
+  battle = resolveBattleCommand(battle, { kind: 'guard', actorId }, rng).nextState;
+  assert.equal(battle.effects.length, 1, 'the effect must not expire during or immediately after the turn that applied it');
+});
