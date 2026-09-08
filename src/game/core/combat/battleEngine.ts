@@ -13,7 +13,7 @@ import { calculateDamage } from './damage.js';
 import { chooseEnemyMove, chooseEnemyTargets } from './enemyAi.js';
 import { livingTargets, validatePlayerCommand } from './actions.js';
 import { previewItemPp } from '../progression/itemRecovery.js';
-import { addEffect, clearAllEffects, clearEffectsForUnit, EFFECT_LIFETIMES, tickSourceTurnStart, tickTargetTurnEnd } from './battleEffects.js';
+import { addEffect, clearAllEffects, clearEffectsForUnit, consumeEffect, EFFECT_LIFETIMES, tickSourceTurnStart, tickTargetTurnEnd } from './battleEffects.js';
 import { applyIncomingEffects } from './interception.js';
 
 
@@ -150,12 +150,34 @@ function relicAffinityBonus(state:BattleState,actor:BattleUnit,affinity:AbilityD
   const relic=ids[affinity]; return relic&&state.relicIds.includes(relic)?1.10:1;
 }
 
+/**
+ * Consumes one eligible Ink Mark on the target and returns the power to add to this single hit.
+ * Runs after the accuracy check and before the damage formula, so the bonus takes the consuming
+ * skill's affinity and passes through defenses exactly once. No extra RNG, no second damage packet.
+ */
+function consumeInkMark(state:BattleState,actor:BattleUnit,target:BattleUnit,consumer:{abilityId:string;allowed:Set<string>},events:CombatEvent[]):number {
+  const mark=state.effects.find(effect=>effect.id==='ink-mark'&&effect.targetUnitId===target.id&&consumer.allowed.has(effect.uid));
+  if(!mark) return 0;
+  const source=state.units[mark.sourceUnitId];
+  consumeEffect(state,mark.uid,events);
+  let bonus=BALANCE.ken.inkMarkPower;
+  if(source?.alive&&source.id!==actor.id&&Number(source.flags.collaborativeWorkRound??0)!==state.round){
+    source.flags.collaborativeWorkRound=state.round;
+    bonus+=BALANCE.ken.collaborativeWorkPower;
+  }
+  if(consumer.abilityId==='needlework') bonus+=BALANCE.ken.needleworkMarkPower;
+  events.push({type:'message',text:`Ink Mark adds ${bonus} power to ${actor.displayName}'s hit.`});
+  return bonus;
+}
+
 function damageOne(
   state:BattleState,actor:BattleUnit,target:BattleUnit,power:number,affinity:AbilityDefinition['affinity'],rng:SeededRng,
-  events:CombatEvent[],opts?:{cannotMiss?:boolean;accuracy?:number;outgoing?:number;onHitHealPercent?:number}
+  events:CombatEvent[],opts?:{cannotMiss?:boolean;accuracy?:number;outgoing?:number;onHitHealPercent?:number;markConsumer?:{abilityId:string;allowed:Set<string>}}
 ):{hit:boolean;damage:number;killed:boolean;critical:boolean} {
   const accuracy=Math.max(0,Math.min(1,(opts?.accuracy ?? 100)/100*accuracyMultiplier(actor)));
   if(!opts?.cannotMiss && !rng.chance(accuracy)) { events.push({type:'miss',actorId:actor.id,targetId:target.id}); return {hit:false,damage:0,killed:false,critical:false}; }
+  const markBonus=opts?.markConsumer?consumeInkMark(state,actor,target,opts.markConsumer,events):0;
+  power+=markBonus;
   const wasAlive=target.alive;
   let result=calculateDamage({attacker:actor,defender:target,power,moveAffinity:affinity,rng,outgoingMultiplier:(opts?.outgoing??1)*relicAffinityBonus(state,actor,affinity)});
   if(target.side==='ally'&&state.relicIds.includes('cardboard-plate')&&!state.flags.cardboardPlateUsed){state.flags.cardboardPlateUsed=true;result={...result,amount:Math.max(1,Math.round(result.amount*0.65))};}
@@ -204,13 +226,17 @@ function statusOne(state:BattleState,actor:BattleUnit,target:BattleUnit,ability:
   events.push({type:'statusApplied',targetId:target.id,statusId:effect.statusId,duration});
 }
 
-function cleanseOne(target:BattleUnit,count:number,events:CombatEvent[]):void {
+function cleanseOne(state:BattleState,target:BattleUnit,count:number,events:CombatEvent[]):void {
   let remaining=count; const next:StatusInstance[]=[];
   for(const status of target.statuses) {
     if(remaining>0 && NEGATIVE_STATUSES.includes(status.id)) { events.push({type:'statusRemoved',targetId:target.id,statusId:status.id}); remaining--; }
     else next.push(status);
   }
   target.statuses=next;
+  if(remaining>0){
+    const mark=state.effects.find(effect=>effect.id==='ink-mark'&&effect.targetUnitId===target.id);
+    if(mark){consumeEffect(state,mark.uid,events);remaining--;}
+  }
 }
 
 function sacrifice(unit:BattleUnit,amount:number,basis:'max'|'current',floorAtOne:boolean,events:CombatEvent[]):void {
@@ -219,10 +245,10 @@ function sacrifice(unit:BattleUnit,amount:number,basis:'max'|'current',floorAtOn
   if(paid>0) events.push({type:'damage',targetId:unit.id,amount:paid,critical:false,affinity:'normal'});
 }
 
-interface AbilityContext { cannotMiss:boolean; outgoing:number; damagePowerOverride?:number; poorDoubleDown?:boolean; totalDamage:number; anyKo:boolean; sharedAccuracy:Record<string,boolean>; sharedMissEmitted:Record<string,boolean>; }
+interface AbilityContext { cannotMiss:boolean; outgoing:number; damagePowerOverride?:number; poorDoubleDown?:boolean; totalDamage:number; anyKo:boolean; sharedAccuracy:Record<string,boolean>; sharedMissEmitted:Record<string,boolean>; consumableMarkUids:Set<string>; }
 
 function prepareAbilityContext(state:BattleState,actor:BattleUnit,ability:AbilityDefinition,rng:SeededRng,events:CombatEvent[]):AbilityContext {
-  const ctx:AbilityContext={cannotMiss:false,outgoing:1,totalDamage:0,anyKo:false,sharedAccuracy:{},sharedMissEmitted:{}};
+  const ctx:AbilityContext={cannotMiss:false,outgoing:1,totalDamage:0,anyKo:false,sharedAccuracy:{},sharedMissEmitted:{},consumableMarkUids:new Set(state.effects.filter(effect=>effect.id==='ink-mark').map(effect=>effect.uid))};
   const damaging=ability.effects.some(effect=>effect.kind==='damage');
   if(actor.sourceId==='michael' && damaging && !actor.flags.steadyAimUsed) { ctx.cannotMiss=true;ctx.outgoing*=1.1;actor.flags.steadyAimUsed=true; }
   if(ability.mechanicId==='cannot-miss') ctx.cannotMiss=true;
@@ -263,7 +289,7 @@ function passesSharedMoveAccuracy(
 function resolveEffects(
   state:BattleState,actor:BattleUnit,effects:EffectDefinition[],ability:AbilityDefinition|undefined,requestedTargets:string[],rng:SeededRng,events:CombatEvent[],ctx?:AbilityContext
 ):AbilityContext {
-  const context=ctx ?? {cannotMiss:false,outgoing:1,totalDamage:0,anyKo:false,sharedAccuracy:{},sharedMissEmitted:{}};
+  const context=ctx ?? {cannotMiss:false,outgoing:1,totalDamage:0,anyKo:false,sharedAccuracy:{},sharedMissEmitted:{},consumableMarkUids:new Set(state.effects.filter(effect=>effect.id==='ink-mark').map(effect=>effect.uid))};
   for(const effect of effects) {
     if(state.phase==='victory'||state.phase==='defeat') break;
     if(effect.kind==='sacrificeHp') { sacrifice(actor,effect.amount,effect.basis,effect.floorAtOne,events); continue; }
@@ -291,7 +317,7 @@ function resolveEffects(
     }
     const ids=targetIdsFor(state,actor,effect.target,requestedTargets,rng);
     if(effect.kind==='heal') { for(const id of ids){const target=state.units[id];if(target)healOne(state,actor,target,effect.percentMaxHp,ability,events,effect.mechanicId);}continue; }
-    if(effect.kind==='cleanse') { for(const id of ids){const target=state.units[id];if(target)cleanseOne(target,effect.count,events);}continue; }
+    if(effect.kind==='cleanse') { for(const id of ids){const target=state.units[id];if(target)cleanseOne(state,target,effect.count,events);}continue; }
     if(effect.kind==='status') { for(const id of ids){const target=state.units[id];if(!target)continue;const shared=passesSharedMoveAccuracy(actor,target,ability,context,rng,events);if(shared===false)continue;statusOne(state,actor,target,ability,effect,rng,events,shared===true||context.cannotMiss);}continue; }
     if(effect.kind==='applyEffect') {
       for(const id of ids) {
@@ -317,7 +343,7 @@ function resolveEffects(
           if(effect.mechanicId==='corrective-action'&&(target.statuses.some(status=>['weaken','slow','blind','exposed'].includes(status.id))||state.effects.some(fx=>fx.id==='ink-mark'&&fx.targetUnitId===target.id)))power+=BALANCE.saq.correctiveActionBonusPower;
           const drain=effect.mechanicId==='life-drain'?(upgraded(actor,ability!)?0.45:0.35):effect.mechanicId==='enemy-life-drain'?0.35:0;
           const shared=passesSharedMoveAccuracy(actor,target,ability,context,rng,events);if(shared===false)continue;
-          const result=damageOne(state,actor,target,power,ability?.affinity ?? actor.affinity,rng,events,{cannotMiss:shared===true||context.cannotMiss,accuracy:shared===undefined?effect.accuracy??ability?.accuracy:undefined,outgoing,onHitHealPercent:drain});
+          const result=damageOne(state,actor,target,power,ability?.affinity ?? actor.affinity,rng,events,{cannotMiss:shared===true||context.cannotMiss,accuracy:shared===undefined?effect.accuracy??ability?.accuracy:undefined,outgoing,onHitHealPercent:drain,markConsumer:actor.side==='ally'&&ability&&target.side==='enemy'?{abilityId:ability.id,allowed:context.consumableMarkUids}:undefined});
           context.totalDamage+=result.damage;context.anyKo ||= result.killed;
           if(result.killed && actor.sourceId==='greg'&&!actor.flags.spoilsUsed){actor.flags.spoilsUsed=true;awardCoins(state,5,events);}
         }
@@ -442,7 +468,7 @@ function resolveItem(state:BattleState,actor:BattleUnit,command:Extract<BattleCo
   for(const effect of item.effects){
     if(effect.kind==='healPercent'||effect.kind==='healPartyPercent'){for(const id of ids){const target=state.units[id];if(target)healOne(state,actor,target,effect.percent,undefined,events);}}
     else if(effect.kind==='status'){for(const id of ids){const target=state.units[id];if(target){target.statuses=applyStatus(target.statuses,effect.statusId,effect.duration);events.push({type:'statusApplied',targetId:target.id,statusId:effect.statusId,duration:effect.duration});}}}
-    else if(effect.kind==='cleanse'){for(const id of ids){const target=state.units[id];if(target)cleanseOne(target,effect.count,events);}}
+    else if(effect.kind==='cleanse'){for(const id of ids){const target=state.units[id];if(target)cleanseOne(state,target,effect.count,events);}}
     else if(effect.kind==='restorePP'){for(const id of ids){const target=state.units[id];if(target?.abilityPP){const pp=previewItemPp(target,effect.amount,state.relicIds);if(pp){target.abilityPP[pp.abilityId]=pp.after;events.push({type:'message',text:`${target.displayName}'s ${getAbility(pp.abilityId).name} recovered ${pp.after-pp.before} PP.`});}}}}
     else if(effect.kind==='revive'){for(const id of ids){const target=state.units[id];if(target&&!target.alive){const amount=Math.max(1,Math.round(target.maxHp*effect.percentMaxHp));setHp(target,amount);events.push({type:'revive',targetId:target.id,amount},{type:'heal',targetId:target.id,amount});}}}
     else if(effect.kind==='damage'){for(const id of ids){const target=state.units[id];if(target?.alive)damageOne(state,actor,target,effect.power,'neutral',rng,events,{cannotMiss:true});}}
