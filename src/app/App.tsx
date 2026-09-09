@@ -80,21 +80,32 @@ function GlobalLifecycle() {
   useEffect(() => { audioEngine.configure(settings); }, [settings]);
   useEffect(() => {
     const unlock = () => { audioEngine.unlock(); document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); };
+    const visibility = () => audioEngine.setSuspended(document.hidden);
     const uiClick = (event: MouseEvent) => {
       const target = event.target instanceof Element ? event.target.closest('button') : null;
       if(target instanceof HTMLButtonElement && !target.disabled) void audioEngine.sfx('ui-click');
     };
     document.addEventListener('pointerdown', unlock, { once: true });
     document.addEventListener('keydown', unlock, { once: true });
+    document.addEventListener('visibilitychange', visibility);
     document.addEventListener('click', uiClick);
-    return () => { document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); document.removeEventListener('click', uiClick); };
+    return () => { document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); document.removeEventListener('visibilitychange', visibility); document.removeEventListener('click', uiClick); };
   }, []);
+  useEffect(() => useAppStore.subscribe((next, previous) => {
+    if (next.overlay === null && previous.overlay !== null) void audioEngine.sfx('cancel');
+    if (next.screen === 'shop' && previous.screen !== 'shop') void audioEngine.sfx('shop');
+    if ((next.run?.shopVisit?.purchasedOfferIds.length ?? 0) > (previous.run?.shopVisit?.purchasedOfferIds.length ?? 0)) void audioEngine.sfx('purchase');
+    if (previous.run?.pendingReward && !next.run?.pendingReward) void audioEngine.sfx('reward');
+    if (next.eventResult && next.eventResult !== previous.eventResult) void audioEngine.sfx('dice');
+    if (next.notice === 'Field recovery committed.' && next.notice !== previous.notice) void audioEngine.sfx('item');
+    if (previous.screen === 'party' && next.screen === 'route') void audioEngine.sfx('confirm');
+  }), []);
   useEffect(() => { if(error) void audioEngine.sfx('error'); }, [error]);
   useEffect(() => {
     if (screen === 'battle' && run?.activeBattle) {
       void audioEngine.musicTrack(run.activeBattle.tier === 'boss' ? 'boss-music' : 'battle-music');
     } else {
-      audioEngine.stopMusic();
+      void audioEngine.musicTrack('exploration-music');
     }
   }, [screen, run?.activeBattle?.id, run?.activeBattle?.tier]);
   return null;

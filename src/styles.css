@@ -464,9 +464,7 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
   .skill-main, .item-main { min-height:66px; padding:5px 6px; }
   .skill-main > small { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .title-mark h1 { margin-bottom:12px; }
-  /* ponytail: removes affinity square at this viewport to widen the name column from ~52px to ~86px, preventing mid-word character breaks in skill names */
-  .skill-main { grid-template-columns:auto minmax(0,1fr); }
-  .skill-main .affinity { display:none; }
+  /* ponytail: widen name column for narrow viewport; grid-template override must come after .skill-main base rule (line ~758) so it lives in a second media block below */
   .skill-main strong { font-size:.78rem; }
 }
 
@@ -768,6 +766,10 @@ dialog.global-overlay:not([open]) { display: none; }
 .skill-main .affinity-trick { background:var(--affinity-trick); }
 .skill-main .affinity-mystic { background:var(--affinity-mystic); }
 .skill-main .affinity-neutral { background:var(--affinity-neutral); }
+@media (max-height: 700px) and (max-width: 599px) {
+  .skill-main { grid-template-columns:auto minmax(0,1fr) 0px; }
+  .skill-main .affinity { width:0; min-width:0; overflow:hidden; padding:0; }
+}
 .skill-main > em, .item-main > em { color: var(--red-dark); font-weight: 950; font-style: normal; }
 .skill-info, .item-info { min-width: var(--touch); border: 0; border-left: 2px dashed rgba(30,26,23,.55); background: rgba(255,255,255,.18); font: 950 .9rem ui-monospace, monospace; }
 .skill-info:hover, .item-info:hover { background: var(--mustard); }

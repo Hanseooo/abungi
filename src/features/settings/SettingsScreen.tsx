@@ -1,7 +1,30 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAppStore } from '../../app/appStore';
 import { PaperButton } from '../../ui/components/PaperButton';
 import { audioEngine } from '../../services/audio/audioEngine';
+
+// ponytail: the service worker precaches every asset at install, so there is nothing to kick off here.
+// This row only reports what actually landed. Add a real fetch loop if assets ever move to runtime caching.
+async function countCachedAssets(){
+  if(!('caches' in window)||!navigator.serviceWorker) return 0;
+  const ready=await Promise.race([navigator.serviceWorker.ready,new Promise(resolve=>window.setTimeout(resolve,8000))]);
+  if(!ready) return 0;
+  const name=(await caches.keys()).find(key=>key.includes('precache'));
+  return name?(await (await caches.open(name)).keys()).length:0;
+}
+
+function OfflineRow(){
+  const [files,setFiles]=useState(0);const [checking,setChecking]=useState(true);
+  const check=useCallback(async()=>{
+    setChecking(true);
+    try{ setFiles(await countCachedAssets()); }
+    catch(error){ console.warn('Offline cache check failed', error); setFiles(0); }
+    finally{ setChecking(false); }
+  },[]);
+  useEffect(()=>{void check();},[check]);
+  const detail=checking?'Checking the local cache…':files>0?`${files} files stored. Abungi plays without a connection.`:'Not stored yet. Stay online a moment, then re-check.';
+  return <div className="setting-row"><span><strong>Offline assets</strong><small>{detail}</small></span><PaperButton variant="quiet" disabled={checking} onClick={()=>void check()}>{checking?'CHECKING…':'RE-CHECK'}</PaperButton></div>;
+}
 
 export function SettingsScreen(){
   const settings=useAppStore(s=>s.settings);const update=useAppStore(s=>s.updateSettings);const close=useAppStore(s=>s.closeOverlay);
@@ -14,6 +37,7 @@ export function SettingsScreen(){
       <label className="setting-row"><span><strong>SFX volume</strong><small>{Math.round(settings.sfxVolume*100)}%</small></span><input type="range" min="0" max="1" step="0.05" value={settings.sfxVolume} onChange={e=>void update({sfxVolume:Number(e.target.value)})}/></label>
       <fieldset className="setting-row speed-setting"><legend><strong>Battle animation speed</strong><small>Rules are identical at every speed; only presentation timing changes.</small></legend><div>{([1,2,3] as const).map(v=><button className={settings.animationSpeed===v?'selected':''} key={v} onClick={()=>void update({animationSpeed:v})}>{v}×</button>)}</div></fieldset>
       <label className="setting-row"><span><strong>Reduced motion</strong><small>Uses fades/highlights instead of strong shake and large movement.</small></span><input type="checkbox" checked={settings.reducedMotion} onChange={e=>void update({reducedMotion:e.target.checked})}/></label>
+      <OfflineRow/>
     </section>
     <footer className="overlay-actions"><PaperButton variant="ink" onClick={close}>RETURN TO GAME</PaperButton></footer>
   </section>;
