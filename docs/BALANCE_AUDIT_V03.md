@@ -8,35 +8,35 @@ Provenance: revision `unrecorded`, working tree `unrecorded`, seeds `101,202,303
 
 | Tier | Win rate | Avg rounds | Median rounds | p90 rounds | Avg survivors | Ending HP | Timeouts | Defeats |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| normal | 94.5% | 3.77 | 3 | 6 | 2.60 | 67.8% | 0 | 3028 |
-| elite | 88.9% | 5.94 | 5 | 9 | 2.22 | 53.1% | 0 | 3037 |
-| boss | 75.3% | 8.81 | 8 | 12 | 1.78 | 39.6% | 0 | 6795 |
+| normal | 96.4% | 3.71 | 3 | 6 | 2.70 | 71.1% | 1 | 1969 |
+| elite | 92.9% | 5.76 | 5 | 9 | 2.40 | 58.3% | 0 | 1961 |
+| boss | 78.4% | 8.44 | 7 | 12 | 1.91 | 43.8% | 0 | 5928 |
 
-Overall: 88.3% wins, 5.57 average rounds.
+Overall: 91.0% wins, 5.41 average rounds.
 
 ## Character inclusion results
 
 | Character | Overall win | Normal | Elite | Boss | Avg rounds | Ending HP |
 |---|---:|---:|---:|---:|---:|---:|
-| Jiro | 94.6% | 97.7% | 96.3% | 86.6% | 6.31 | 73.4% |
-| Greg | 92.9% | 97.7% | 94.0% | 82.3% | 4.65 | 60.3% |
-| Yatords | 92.0% | 98.1% | 94.7% | 77.4% | 4.61 | 61.5% |
-| Nathaniel | 91.4% | 95.9% | 89.1% | 84.5% | 5.15 | 57.8% |
-| Earl | 89.8% | 95.2% | 93.5% | 75.2% | 5.68 | 58.9% |
-| Marcus | 88.9% | 93.3% | 89.3% | 79.8% | 6.04 | 56.4% |
-| Michael | 88.5% | 92.6% | 88.4% | 80.6% | 5.17 | 55.2% |
-| Leandre | 86.6% | 94.7% | 88.9% | 68.1% | 5.45 | 53.0% |
-| Hans | 85.8% | 89.9% | 81.9% | 81.2% | 6.39 | 59.8% |
-| Saq | 85.2% | 92.2% | 85.9% | 70.2% | 6.69 | 53.7% |
-| Yeeho | 84.9% | 96.1% | 85.4% | 61.9% | 5.11 | 48.8% |
-| Daboy | 84.8% | 94.6% | 86.1% | 64.0% | 5.84 | 53.0% |
-| Ken | 82.4% | 90.3% | 82.7% | 66.3% | 5.35 | 49.8% |
+| Jiro | 95.6% | 98.5% | 97.3% | 88.1% | 6.10 | 75.6% |
+| Nathaniel | 93.7% | 97.5% | 91.4% | 88.4% | 5.06 | 60.6% |
+| Greg | 93.4% | 98.6% | 96.0% | 80.4% | 4.55 | 62.6% |
+| Marcus | 92.8% | 96.4% | 94.6% | 83.7% | 6.11 | 62.5% |
+| Yatords | 92.4% | 98.7% | 96.3% | 75.8% | 4.48 | 63.6% |
+| Earl | 91.7% | 96.7% | 95.9% | 77.5% | 5.57 | 61.7% |
+| Hans | 90.7% | 93.4% | 88.9% | 86.9% | 6.22 | 68.8% |
+| Michael | 90.6% | 94.2% | 92.3% | 81.6% | 5.06 | 58.2% |
+| Saq | 89.3% | 94.5% | 91.0% | 77.2% | 6.45 | 58.9% |
+| Daboy | 88.7% | 96.3% | 90.8% | 71.4% | 5.50 | 57.8% |
+| Leandre | 88.7% | 96.8% | 92.3% | 68.8% | 5.33 | 56.2% |
+| Yeeho | 88.2% | 97.8% | 91.5% | 65.8% | 4.89 | 53.2% |
+| Ken | 87.5% | 93.9% | 88.7% | 73.7% | 4.95 | 54.7% |
 
 ## Interpretation
 
-- Mean character-inclusion win rate: 88.3%.
-- Directionally high (>4.5 percentage points above mean): Jiro, Greg.
-- Directionally low (>4.5 percentage points below mean): Ken.
+- Mean character-inclusion win rate: 91.0%.
+- Directionally high (>4.5 percentage points above mean): Jiro.
+- Directionally low (>4.5 percentage points below mean): none.
 - Do not tune from this table alone. Economy utility, player mastery, party synergy, consumables and route decisions are intentionally underrepresented.
 - Hans should be judged especially on boss/elite performance after the new deployable presentation is visible; perceived impact was a UX problem in v0.1.
 - Leandre's run-level value is undercounted because this encounter audit cannot price his extra shop offer.
@@ -45,13 +45,13 @@ Overall: 88.3% wins, 5.57 average rounds.
 
 | Metric | Count |
 |---|---:|
-| Protect casts | 57824 |
-| Protect triggered (consumed) | 37032 |
-| Protect expired unused | 15939 |
-| HP transferred to Saq | 140211 |
-| Class Monitor prevented | 173296 |
-| Ready granted | 37024 |
-| Ready spent | 33899 |
+| Protect casts | 47137 |
+| Protect triggered (consumed) | 37070 |
+| Protect expired unused | 3688 |
+| HP transferred to Saq | 52957 |
+| Class Monitor prevented | 231863 |
+| Ready granted | 37070 |
+| Ready spent | 33606 |
 
 Note: recipient avoids the full intercepted hit; Saq pays transfer cost; party saves monitorPrevented. These are not the same number.
 
@@ -61,54 +61,54 @@ _Same pair of teammates, same encounter, same seed. RNG diverges after turn 1. T
 
 | Tier | Saq win rate | Marcus win rate | Delta | Saq median rounds | Marcus median rounds |
 |---|---:|---:|---:|---:|---:|
-| normal | 94.7% | 94.6% | 0.1pp | 4 | 3 |
-| elite | 91.3% | 92.2% | -0.9pp | 6 | 6 |
-| boss | 77.6% | 84.8% | -7.3pp ⚠️ | 9 | 8 |
+| normal | 96.5% | 97.5% | -1.1pp | 4 | 3 |
+| elite | 94.8% | 96.4% | -1.6pp | 6 | 6 |
+| boss | 81.6% | 87.2% | -5.6pp ⚠️ | 9 | 8 |
 
 ## Ink diagnostics (Ken-inclusive parties, 25344 battles)
 
 | Metric | Value |
 |---|---:|
-| Marks applied | 97470 |
-| Marks consumed | 95434 |
-| Marks expired | 661 |
-| Marks cleared | 1375 |
-| Mark payoff messages | 95434 |
-| Added mark damage % | 4759760 |
+| Marks applied | 91769 |
+| Marks consumed | 90138 |
+| Marks expired | 535 |
+| Marks cleared | 1096 |
+| Mark payoff messages | 90138 |
+| Added mark damage % | 5395610 |
 | Median setup-to-payoff delay | 0 rounds |
 
 ## Script diagnostics
 
 | Metric | Value |
 |---|---:|
-| Script applied | 9255 |
-| Script triggered | 6934 |
-| Script expired | 629 |
-| Damage prevented | 99157 |
+| Script applied | 7657 |
+| Script triggered | 5797 |
+| Script expired | 356 |
+| Damage prevented | 98420 |
 
 ## Matched-slot replacement: Ken vs Nathaniel (21120 matched pairs)
 
 | Tier | Ken win rate | Nathaniel win rate | Delta |
 |---|---:|---:|---:|
-| normal | 90.6% | 96.1% | -5.6pp |
-| elite | 85.5% | 89.0% | -3.5pp |
-| boss | 67.4% | 82.9% | -15.5pp |
+| normal | 93.8% | 97.5% | -3.7pp |
+| elite | 90.6% | 90.6% | -0.0pp |
+| boss | 74.6% | 86.3% | -11.7pp |
 ## Layered defense
 
 | Party | Win rate | Timeouts | Ending HP |
 |---|---:|---:|---:|
-| saq / ken / jiro | 84.9% | 0 | 57.5% |
-| saq / ken / nathaniel | 76.3% | 0 | 47.9% |
-| saq / marcus / jiro | 89.8% | 0 | 72.6% |
-| saq / marcus / hans | 84.6% | 0 | 68.1% |
-| saq / earl / jiro | 96.1% | 0 | 79.9% |
-| saq / nathaniel / earl | 86.2% | 0 | 52.2% |
+| saq / ken / jiro | 93.0% | 0 | 65.7% |
+| saq / ken / nathaniel | 82.3% | 0 | 53.4% |
+| saq / marcus / jiro | 89.6% | 0 | 73.4% |
+| saq / marcus / hans | 97.9% | 0 | 87.9% |
+| saq / earl / jiro | 96.4% | 0 | 80.2% |
+| saq / nathaniel / earl | 89.3% | 0 | 53.9% |
 
 ## Burst checks
 
 | Party | Win rate | Timeouts | Ending HP |
 |---|---:|---:|---:|
-| ken / nathaniel / leandre | 69.8% | 0 | 39.7% |
-| ken / greg / yatords | 89.8% | 0 | 59.7% |
-| ken / michael / daboy | 77.9% | 0 | 44.6% |
+| ken / nathaniel / leandre | 73.2% | 0 | 41.7% |
+| ken / greg / yatords | 89.3% | 0 | 61.2% |
+| ken / michael / daboy | 86.5% | 0 | 51.2% |
 

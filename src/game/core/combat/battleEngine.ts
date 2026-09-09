@@ -276,7 +276,7 @@ function prepareAbilityContext(state:BattleState,actor:BattleUnit,ability:Abilit
   if(ability.id==='double-down') {
     const good=rng.chance(0.60); ctx.damagePowerOverride=(good?110:55)+(good&&upgraded(actor,ability)?ability.upgrade.powerDelta??0:0);
     if(!good) {
-      ctx.poorDoubleDown=true; sacrifice(actor,0.12,'max',true,events);
+      ctx.poorDoubleDown=true; sacrifice(actor,0.08,'max',true,events);
       if(!actor.flags.houseEdgeRefunded) { actor.abilityPP![ability.id]=Math.min(ability.maxPP,actor.abilityPP![ability.id]+1);actor.flags.houseEdgeRefunded=true;events.push({type:'message',text:'House Edge refunds 1 PP.'}); }
     }
   }
@@ -406,7 +406,7 @@ function triggerDeployables(state:BattleState,actor:BattleUnit,rng:SeededRng,eve
     if(deployable.type==='sentry') {
       const foes=livingTargets(state,'enemy'); if(foes.length){const target=rng.pick(foes);const power=Math.round(34*upgradeScale*(deployable.enhanced?1.35:1));const result=damageOne(state,actor,target,power,'tech',rng,events,{cannotMiss:true});events.push({type:'deployableTrigger',ownerId:actor.id,deployableId:deployable.id,deployableType:'sentry',targetId:target.id,effect:'damage',amount:result.damage,enhanced:deployable.enhanced});}
     } else {
-      const allies=livingTargets(state,'ally'); if(allies.length){const target=[...allies].sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];const before=target.hp;setHp(target,target.hp+Math.round(target.maxHp*0.14*upgradeScale*(deployable.enhanced?1.35:1)));const amount=target.hp-before;if(amount>0)events.push({type:'heal',targetId:target.id,amount});events.push({type:'deployableTrigger',ownerId:actor.id,deployableId:deployable.id,deployableType:'repair-drone',targetId:target.id,effect:'heal',amount,enhanced:deployable.enhanced});}
+      const allies=livingTargets(state,'ally'); if(allies.length){const target=[...allies].sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];const before=target.hp;setHp(target,target.hp+Math.round(target.maxHp*0.20*upgradeScale*(deployable.enhanced?1.35:1)));const amount=target.hp-before;if(amount>0)events.push({type:'heal',targetId:target.id,amount});events.push({type:'deployableTrigger',ownerId:actor.id,deployableId:deployable.id,deployableType:'repair-drone',targetId:target.id,effect:'heal',amount,enhanced:deployable.enhanced});}
     }
     deployable.remainingTurns-=1;
   }

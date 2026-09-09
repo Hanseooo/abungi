@@ -2,6 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { applyIncomingEffects } from '../../.domain-build/core/combat/interception.js';
 import { addEffect } from '../../.domain-build/core/combat/battleEffects.js';
+import { BALANCE } from '../../.domain-build/balance/constants.js';
+
+// These payoffs are tuning values. Derive them so the tests check the mechanic, not a number
+// that has to be restated in three places every time the dial moves.
+const markPercent=bonus=>Math.round((BALANCE.ken.inkMarkDamageMultiplier+bonus-1)*100);
 
 function scenario({ withProtect = false, targetMaxHp = 100 } = {}) {
   const ken = { id: 'ally-0-ken', sourceId: 'ken', side: 'ally', hp: 98, maxHp: 98, alive: true, flags: {} };
@@ -40,9 +45,11 @@ test('Script resolves before Protect and neither pass is applied twice', () => {
   const { state, saq, hans, foe } = scenario({ withProtect: true });
   const events = [];
   const damage = applyIncomingEffects(state, foe, hans, 40, events);
-  // Script prevents 30% of 40 = 12, leaving B=28; recipient keeps 14; R=14; transfer ceil(14/2)=7,
-  // which Class Monitor now absorbs whole, so Saq covers the rest for free.
-  assert.equal(damage, 14);
+  // Script prevents its share first, then Protect halves what is left and Class Monitor absorbs
+  // the whole transfer, so Saq covers the rest for free.
+  const prevented = Math.min(Math.max(BALANCE.ken.scriptPreventFloor, Math.round(40 * BALANCE.ken.scriptPreventPercent)), 40);
+  const afterScript = 40 - prevented;
+  assert.equal(damage, afterScript - Math.floor(afterScript / 2));
   assert.equal(saq.hp, 116);
   assert.equal(events.filter(e => e.type === 'transfer').length, 0, 'nothing left to transfer');
   assert.equal(saq.flags.readyTurns, 1, 'Saq still earns Ready for taking the call');
@@ -78,7 +85,7 @@ test('Fresh Ink cannot consume the mark it is about to apply', () => {
   assert.equal(resolution.nextState.effects.filter(e => e.id === 'ink-mark').length, 1);
 });
 
-test('another ally consuming the mark adds 35% plus the 15% passive, once per round', () => {
+test('another ally consuming the mark adds the mark bonus plus the passive, once per round', () => {
   const rng = new SeededRng(777);
   let battle = kenParty();
   const kenId = unitOf(battle, 'ken');
@@ -87,12 +94,13 @@ test('another ally consuming the mark adds 35% plus the 15% passive, once per ro
   battle.effects.push({ uid: 'fx-mark', id: 'ink-mark', sourceUnitId: kenId, targetUnitId: foeId, expiry: 'source-turn-start', remaining: 2 });
   battle = advanceTo(battle, michaelId, rng);
   const resolution = resolveBattleCommand(battle, { kind: 'skill', actorId: michaelId, abilityId: 'rifle-burst', targetIds: [foeId] }, rng);
-  assert.ok(resolution.events.some(e => e.type === 'message' && e.text.includes('50% damage')), 'mark 35% plus Collaborative Work 15%');
+  const expected = markPercent(BALANCE.ken.collaborativeWorkDamageBonus);
+  assert.ok(resolution.events.some(e => e.type === 'message' && e.text.includes(`${expected}% damage`)), `mark plus Collaborative Work should read ${expected}%`);
   assert.equal(resolution.nextState.effects.filter(e => e.id === 'ink-mark').length, 0);
   assert.equal(Number(resolution.nextState.units[kenId].flags.collaborativeWorkRound), battle.round);
 });
 
-test('Ken consuming his own mark gets 35% and does not trigger his passive', () => {
+test('Ken consuming his own mark gets the mark bonus and does not trigger his passive', () => {
   const rng = new SeededRng(777);
   let battle = kenParty();
   const kenId = unitOf(battle, 'ken');
@@ -100,8 +108,9 @@ test('Ken consuming his own mark gets 35% and does not trigger his passive', () 
   battle.effects.push({ uid: 'fx-mark', id: 'ink-mark', sourceUnitId: kenId, targetUnitId: foeId, expiry: 'source-turn-start', remaining: 2 });
   battle = advanceTo(battle, kenId, rng);
   const resolution = resolveBattleCommand(battle, { kind: 'skill', actorId: kenId, abilityId: 'needlework', targetIds: [foeId] }, rng);
-  // The consuming hit takes 1.35 + 0.20 Needlework = 1.55x damage; the other two hits are unchanged.
-  assert.ok(resolution.events.some(e => e.type === 'message' && e.text.includes('55% damage')), 'mark 35% plus Needlework 20%, no passive');
+  // Only the consuming hit takes the mark bonus plus Needlework's own; the other two are unchanged.
+  const expected = markPercent(BALANCE.ken.needleworkMarkDamageBonus);
+  assert.ok(resolution.events.some(e => e.type === 'message' && e.text.includes(`${expected}% damage`)), `mark plus Needlework should read ${expected}%, with no passive`);
   assert.equal(resolution.events.filter(e => e.type === 'message' && e.text.includes('% damage')).length, 1, 'the bonus applies once per action, not per hit');
 });
 

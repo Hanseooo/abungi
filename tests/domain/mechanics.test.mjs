@@ -359,5 +359,7 @@ test('House Special pays Daboy for the debuffs his own kit applies',()=>{
   const bonus=paid.events.find(e=>e.type==='damage'&&e.targetId===foeId).amount;
 
   assert.ok(bonus>plain,`Bottle Tap into Slow should beat a clean one: ${bonus} vs ${plain}`);
-  assert.equal(bonus,Math.round(plain*BALANCE.daboy.houseSpecialDamageMultiplier));
+  // The multiplier scales outgoing power, so guard and rounding run after it; comparing against
+  // a multiplied final number is only exact to within a point.
+  assert.ok(Math.abs(bonus-plain*BALANCE.daboy.houseSpecialDamageMultiplier)<=1,`expected ~${plain*BALANCE.daboy.houseSpecialDamageMultiplier}, got ${bonus}`);
 });

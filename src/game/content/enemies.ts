@@ -85,9 +85,12 @@ export const ENEMIES: EnemyDefinition[] = [
   ]}),
   enemy({ id:'warden', displayName:'The Warden', affinity:'tech', tier:'boss', stats:{maxHp:370,power:100,guard:126,speed:76}, assetId:'boss-warden', aiProfile:'boss-warden', rewardCoins:[50,60], moves:[
     move({id:'discipline-shot',name:'Discipline Shot',affinity:'tech',target:'enemy-one',effects:[{kind:'damage',power:78,target:'enemy-one'}],weight:5,condition:'always'}),
-    move({id:'containment',name:'Containment',affinity:'tech',target:'enemy-all',effects:[{kind:'status',target:'enemy-all',statusId:'slow',duration:2}],weight:3,condition:'always'}),
-    move({id:'barrier-protocol',name:'Barrier Protocol',affinity:'neutral',target:'self',effects:[{kind:'status',target:'self',statusId:'fortified',duration:2}],weight:3,condition:'always'}),
-    move({id:'enforcement-burst',name:'Enforcement Burst',affinity:'tech',target:'enemy-all',effects:[{kind:'damage',power:54,target:'enemy-all'}],weight:3,cooldown:2,condition:'self-below-35',signature:true})
+    // Containment and Barrier Protocol deal no damage, and with nothing stopping them repeating
+    // they filled over half the Warden's turns. Cooldowns cap the stall; Enforcement Burst is no
+    // longer held back until 35% HP, so the fight threatens the party instead of just outlasting it.
+    move({id:'containment',name:'Containment',affinity:'tech',target:'enemy-all',effects:[{kind:'status',target:'enemy-all',statusId:'slow',duration:2}],weight:3,cooldown:2,condition:'always'}),
+    move({id:'barrier-protocol',name:'Barrier Protocol',affinity:'neutral',target:'self',effects:[{kind:'status',target:'self',statusId:'fortified',duration:2}],weight:3,cooldown:2,condition:'always'}),
+    move({id:'enforcement-burst',name:'Enforcement Burst',affinity:'tech',target:'enemy-all',effects:[{kind:'damage',power:54,target:'enemy-all'}],weight:3,cooldown:2,condition:'self-below-half',signature:true})
   ]}),
 ];
 

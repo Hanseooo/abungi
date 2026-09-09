@@ -35,7 +35,7 @@ export const BALANCE = {
   // Spec 03 Part B trial values. Unvalidated tuning hypotheses; Part C measures them.
   // Daboy's own Slow and Weaken are the setup; this is what they are worth to him.
   daboy: {
-    houseSpecialDamageMultiplier: 1.35,
+    houseSpecialDamageMultiplier: 1.45,
   },
   saq: {
     classMonitorPrevention: 8,
@@ -44,11 +44,11 @@ export const BALANCE = {
   },
   // Spec 03 Part D trial values. Unvalidated tuning hypotheses; Part E measures them.
   ken: {
-    inkMarkDamageMultiplier: 1.35,
+    inkMarkDamageMultiplier: 1.45,
     collaborativeWorkDamageBonus: 0.15,
     needleworkMarkDamageBonus: 0.20,
     scriptThresholdPercent: 0.20,
-    scriptPreventPercent: 0.30,
+    scriptPreventPercent: 0.38,
     scriptPreventFloor: 10,
   },
   shopBaseOffers: 4,
