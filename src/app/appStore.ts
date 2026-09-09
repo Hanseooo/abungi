@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { CHARACTERS, getAbility, getCharacter } from '../game/content/characters';
 import { getEvent } from '../game/content/events';
 import { getItem } from '../game/content/items';
-import type { BattleCommand, BattleEffectId, CombatEvent, ProfileState, RewardSpoilsChoice, RunState, SettingsState, StatusId } from '../game/core/types';
+import type { AbilityDefinition, BattleCommand, BattleEffectId, BattleState, CombatEvent, ProfileState, RewardSpoilsChoice, RunState, SettingsState, StatusId } from '../game/core/types';
 import { SeededRng } from '../game/core/rng/seededRng';
 import { createBattle, exportPartyFromBattle, resolveBattleCommand } from '../game/core/combat/battleEngine';
 import { validatePlayerCommand } from '../game/core/combat/actions';
@@ -293,5 +293,32 @@ export const useAppStore=create<AppState>((set,get)=>{
 
 export function currentShopOffers(run:RunState|null):ShopOffer[]{return run?.shopVisit?.offers??[];}
 export function currentEvent(run:RunState|null){const node=run&&nodeForCurrent(run);return node?.eventId?getEvent(node.eventId):null;}
-export function currentActorAvailability(run:RunState|null){if(!run?.activeBattle)return null;const battle=run.activeBattle;const actor=battle.units[battle.turnOrder[battle.turnIndex]];if(!actor||actor.side!=='ally')return null;return getCharacter(actor.sourceId).abilities.map(abilityId=>{const ability=getAbility(abilityId);const target=ability.target==='enemy-one'||ability.target==='random-enemy'?battle.enemies.find(id=>battle.units[id].alive):ability.target==='ally-one'?battle.allies.find(id=>battle.units[id].alive):undefined;const legality=validatePlayerCommand(battle,{kind:'skill',actorId:actor.id,abilityId,targetIds:target?[target]:[]});return{ability,legal:legality.legal,reason:legality.reason};});}
+// A single-target skill is legal if ANY living candidate accepts it. Probing only the first
+// candidate made Take Your Seat report itself permanently illegal whenever Saq led the party
+// order, because the one ally it tried was Saq himself.
+export function skillTargetCandidates(battle:BattleState,ability:AbilityDefinition):string[]{
+  if(ability.target==='enemy-one'||ability.target==='random-enemy')return battle.enemies.filter(id=>battle.units[id]?.alive);
+  if(ability.target==='ally-one')return battle.allies.filter(id=>battle.units[id]?.alive);
+  return [];
+}
+
+export function skillTargetLegality(battle:BattleState,actorId:string,abilityId:string,targetIds:string[]){
+  return validatePlayerCommand(battle,{kind:'skill',actorId,abilityId,targetIds});
+}
+
+export function currentActorAvailability(run:RunState|null){
+  if(!run?.activeBattle)return null;
+  const battle=run.activeBattle;
+  const actor=battle.units[battle.turnOrder[battle.turnIndex]];
+  if(!actor||actor.side!=='ally')return null;
+  return getCharacter(actor.sourceId).abilities.map(abilityId=>{
+    const ability=getAbility(abilityId);
+    const candidates=skillTargetCandidates(battle,ability);
+    const checks=candidates.length
+      ? candidates.map(id=>skillTargetLegality(battle,actor.id,abilityId,[id]))
+      : [skillTargetLegality(battle,actor.id,abilityId,[])];
+    const legality=checks.find(check=>check.legal)??checks[0];
+    return{ability,legal:legality.legal,reason:legality.reason};
+  });
+}
 export function inventoryItems(run:RunState|null){return(run?.inventory??[]).map(entry=>({...entry,definition:getItem(entry.itemId)}));}
