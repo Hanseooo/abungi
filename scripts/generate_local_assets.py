@@ -119,13 +119,16 @@ write_wav('defeat.wav',1.3,lambda t,i,n:(sin(2*pi*(220-70*t)*t)+sin(2*pi*(164-50
 write_wav('shop.wav',.48,lambda t,i,n:(sin(2*pi*659*t)+sin(2*pi*784*t))/2,.18)
 
 notes=[146.8,174.6,196.0,220.0,196.0,174.6,164.8,174.6]
-def music_func(boss=False):
+def music_func(pitch=1.0,beat_rate=2.5,pulse_hz=2.5,pulse_gain=.12):
     def f(t,i,n):
-        beat=int(t*2.5)%len(notes);freq=notes[beat]*(.75 if boss else 1);lead=sin(2*pi*freq*t)*.55
+        beat=int(t*beat_rate)%len(notes);freq=notes[beat]*pitch;lead=sin(2*pi*freq*t)*.55
         bass=sin(2*pi*(freq/2)*t)*.32
-        pulse=(1 if sin(2*pi*(2.5 if not boss else 3.2)*t)>0 else -1)*.12
+        pulse=(1 if sin(2*pi*pulse_hz*t)>0 else -1)*pulse_gain
         return lead+bass+pulse
     return f
-write_wav('battle-music.wav',12,music_func(False),.15)
-write_wav('boss-music.wav',12,music_func(True),.18)
+write_wav('battle-music.wav',12,music_func(),.15)
+write_wav('boss-music.wav',12,music_func(pitch=.75,pulse_hz=3.2),.18)
+# Exploration shares the melody a fifth up at half tempo with no percussive pulse,
+# so the route and shop read as the same world at rest rather than a separate theme.
+write_wav('exploration-music.wav',12,music_func(pitch=1.5,beat_rate=1.25,pulse_gain=0),.12)
 print(f'generated {len(assets)} cutouts, 4 backgrounds, 2 icons, {len(list(AUDIO.glob("*.wav")))} audio files')
