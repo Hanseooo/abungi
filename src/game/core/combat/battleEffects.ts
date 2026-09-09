@@ -13,12 +13,14 @@ export interface EffectSpec {
  * Protect: until the start of its source's next turn.
  * Ink Mark / Script: until the start of its source's second subsequent turn.
  * Taxed: until the recipient completes its next turn.
+ * Taunt: until the start of the taunter's next turn.
  */
 export const EFFECT_LIFETIMES: Record<BattleEffectId, Pick<EffectSpec, 'expiry' | 'remaining'>> = {
   'protect': { expiry: 'source-turn-start', remaining: 1 },
   'ink-mark': { expiry: 'source-turn-start', remaining: 2 },
   'script': { expiry: 'source-turn-start', remaining: 2 },
   'taxed': { expiry: 'target-turn-end', remaining: 1 },
+  'taunt': { expiry: 'source-turn-start', remaining: 1 },
 };
 
 function nextUid(state: BattleState): string {

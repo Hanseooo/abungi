@@ -55,3 +55,16 @@ it('existing relationship scenes keep their priority over the new character vari
   const both = { seed: 1, regionIndex: 2, partyIds: ['saq', 'earl', 'marcus'] };
   expect(resolveScene('boss-klyde-intro', both).relationshipId).toBe('siblings-klyde-earl');
 });
+
+it('Ken has a departure, a region transition and one boss reaction', () => {
+  const withKen = { seed: 1, regionIndex: 0, partyIds: ['ken', 'hans', 'marcus'] };
+  const withoutKen = { seed: 1, regionIndex: 0, partyIds: ['earl', 'hans', 'marcus'] };
+  expect(resolveScene('party-departure', withKen).id).not.toEqual(resolveScene('party-departure', withoutKen).id);
+  expect(resolveScene('region-3-intro', { ...withKen, regionIndex: 2 }).id).not.toEqual(resolveScene('region-3-intro', { ...withoutKen, regionIndex: 2 }).id);
+  expect(resolveScene('boss-jonlow-intro', withKen).lines.some(line => line.speaker === 'Ken')).toBe(true);
+});
+
+it('Jiro and Saq keep their authored boss relationship priority over Ken', () => {
+  expect(resolveScene('boss-jonlow-intro', { seed: 1, regionIndex: 0, partyIds: ['ken', 'jiro', 'marcus'] }).relationshipId).toBe('siblings-jonlow-jiro');
+  expect(resolveScene('boss-warden-intro', { seed: 1, regionIndex: 2, partyIds: ['saq', 'ken', 'marcus'] }).relationshipId).toBe('saq-warden');
+});

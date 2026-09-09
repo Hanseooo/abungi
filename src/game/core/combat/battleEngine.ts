@@ -111,6 +111,7 @@ export function createBattle(
     const max=ability.maxPP+(unit.upgradedAbilities?.includes(lowest)?ability.upgrade.maxPPDelta??0:0);
     unit.abilityPP[lowest]=Math.min(max,unit.abilityPP[lowest]+2);
   }
+  if(state.relicIds.includes('old-bandana')) for(const id of allies) units[id].statuses=applyStatus(units[id].statuses,'fortified',1);
   state.turnOrder=calculateTurnOrder(state);
   // Advance through any opening enemy turns so callers always receive an actionable player state when possible.
   return advanceAutomaticTurns(state,rng,options?.openingEvents ?? []).nextState;
@@ -146,28 +147,29 @@ function setHp(unit:BattleUnit,value:number):void { unit.hp=Math.max(0,Math.min(
 
 function relicAffinityBonus(state:BattleState,actor:BattleUnit,affinity:AbilityDefinition['affinity']):number {
   if(actor.side!=='ally') return 1;
-  const ids:Record<string,string>={might:'red-stitch',tech:'copper-trace',mystic:'violet-thread',trick:'marked-card'};
-  const relic=ids[affinity]; return relic&&state.relicIds.includes(relic)?1.10:1;
+  const ids:Record<string,string>={might:'red-stitch',trick:'red-stitch',tech:'copper-trace',mystic:'copper-trace'};
+  const relic=ids[affinity]; return relic&&state.relicIds.includes(relic)?1.12:1;
 }
 
 /**
- * Consumes one eligible Ink Mark on the target and returns the power to add to this single hit.
- * Runs after the accuracy check and before the damage formula, so the bonus takes the consuming
- * skill's affinity and passes through defenses exactly once. No extra RNG, no second damage packet.
+ * Consumes one eligible Ink Mark on the target and returns the damage multiplier for this single
+ * hit. A multiplier rather than flat power, so the payoff survives the defender's guard divisor and
+ * keeps scaling into later regions. Runs after the accuracy check and before the damage formula, so
+ * it applies exactly once. No extra RNG, no second damage packet.
  */
 function consumeInkMark(state:BattleState,actor:BattleUnit,target:BattleUnit,consumer:{abilityId:string;allowed:Set<string>},events:CombatEvent[]):number {
   const mark=state.effects.find(effect=>effect.id==='ink-mark'&&effect.targetUnitId===target.id&&consumer.allowed.has(effect.uid));
-  if(!mark) return 0;
+  if(!mark) return 1;
   const source=state.units[mark.sourceUnitId];
   consumeEffect(state,mark.uid,events);
-  let bonus=BALANCE.ken.inkMarkPower;
+  let multiplier=BALANCE.ken.inkMarkDamageMultiplier;
   if(source?.alive&&source.id!==actor.id&&Number(source.flags.collaborativeWorkRound??0)!==state.round){
     source.flags.collaborativeWorkRound=state.round;
-    bonus+=BALANCE.ken.collaborativeWorkPower;
+    multiplier+=BALANCE.ken.collaborativeWorkDamageBonus;
   }
-  if(consumer.abilityId==='needlework') bonus+=BALANCE.ken.needleworkMarkPower;
-  events.push({type:'message',text:`Ink Mark adds ${bonus} power to ${actor.displayName}'s hit.`});
-  return bonus;
+  if(consumer.abilityId==='needlework') multiplier+=BALANCE.ken.needleworkMarkDamageBonus;
+  events.push({type:'message',text:`Ink Mark adds ${Math.round((multiplier-1)*100)}% damage to ${actor.displayName}'s hit.`});
+  return multiplier;
 }
 
 function damageOne(
@@ -176,16 +178,23 @@ function damageOne(
 ):{hit:boolean;damage:number;killed:boolean;critical:boolean} {
   const accuracy=Math.max(0,Math.min(1,(opts?.accuracy ?? 100)/100*accuracyMultiplier(actor)));
   if(!opts?.cannotMiss && !rng.chance(accuracy)) { events.push({type:'miss',actorId:actor.id,targetId:target.id}); return {hit:false,damage:0,killed:false,critical:false}; }
-  const markBonus=opts?.markConsumer?consumeInkMark(state,actor,target,opts.markConsumer,events):0;
-  power+=markBonus;
+  const markMultiplier=opts?.markConsumer?consumeInkMark(state,actor,target,opts.markConsumer,events):1;
+  let gripMultiplier=1;
+  if(actor.side==='ally'&&state.relicIds.includes('worn-grip')&&!actor.flags.wornGripUsed){actor.flags.wornGripUsed=true;gripMultiplier=1.20;}
+  if(actor.side==='ally'&&state.relicIds.includes('scuffed-knuckles')&&actor.hp<actor.maxHp*0.40)gripMultiplier*=1.20;
+  const outgoing=(opts?.outgoing??1)*markMultiplier*gripMultiplier;
   const wasAlive=target.alive;
-  let result=calculateDamage({attacker:actor,defender:target,power,moveAffinity:affinity,rng,outgoingMultiplier:(opts?.outgoing??1)*relicAffinityBonus(state,actor,affinity)});
+  let result=calculateDamage({attacker:actor,defender:target,power,moveAffinity:affinity,rng,outgoingMultiplier:outgoing*relicAffinityBonus(state,actor,affinity)});
   if(target.side==='ally'&&state.relicIds.includes('cardboard-plate')&&!state.flags.cardboardPlateUsed){state.flags.cardboardPlateUsed=true;result={...result,amount:Math.max(1,Math.round(result.amount*0.65))};}
   // Hostile direct hits only. HP costs, healing and friendly effects never reach this stage.
   if(target.side!==actor.side&&target.side==='ally')result={...result,amount:applyIncomingEffects(state,actor,target,result.amount,events)};
   setHp(target,target.hp-result.amount);
-  events.push({type:'hit',targetId:target.id,heavy:power>=100},{type:'damage',targetId:target.id,amount:result.amount,critical:result.critical,affinity:result.affinity});
-  if(result.critical&&actor.side==='ally'&&state.relicIds.includes('lucky-centavo')&&!state.flags.luckyCentavoUsed){state.flags.luckyCentavoUsed=true;awardCoins(state,5,events);}
+  events.push({type:'hit',targetId:target.id,heavy:power*outgoing>=100},{type:'damage',targetId:target.id,amount:result.amount,critical:result.critical,affinity:result.affinity});
+  if(target.side==='ally'&&target.alive&&state.relicIds.includes('second-wind')&&!state.flags.secondWindUsed&&target.hp<target.maxHp*0.30){
+    state.flags.secondWindUsed=true;
+    const before=target.hp; setHp(target,target.hp+Math.round(target.maxHp*0.15));
+    const healed=target.hp-before; if(healed>0) events.push({type:'heal',targetId:target.id,amount:healed});
+  }
   if(opts?.onHitHealPercent && result.amount>0) {
     const before=actor.hp; setHp(actor,actor.hp+Math.round(result.amount*opts.onHitHealPercent));
     const healed=actor.hp-before; if(healed>0) events.push({type:'heal',targetId:actor.id,amount:healed});
@@ -204,9 +213,8 @@ function damageOne(
 function healOne(state:BattleState,actor:BattleUnit,target:BattleUnit,percent:number,ability:AbilityDefinition|undefined,events:CombatEvent[],mechanicId?:string):number {
   if(!target.alive) return 0;
   let adjusted=ability?upgradedHeal(actor,ability,percent):percent;
-  if(actor.side==='ally'&&state.relicIds.includes('first-aid-tape')&&!state.flags.firstAidTapeUsed){adjusted*=1.20;state.flags.firstAidTapeUsed=true;}
   if(target.side==='ally'&&state.relicIds.includes('pressed-flower')) adjusted*=1.08;
-  if(actor.sourceId==='earl' && !actor.flags.firstResponderUsed && mechanicId==='earl-first-heal') { adjusted*=1.2; actor.flags.firstResponderUsed=true; }
+  if(actor.sourceId==='earl' && !actor.flags.firstResponderUsed && mechanicId==='earl-first-heal') { adjusted*=1.3; actor.flags.firstResponderUsed=true; }
   const before=target.hp; setHp(target,target.hp+Math.round(target.maxHp*adjusted)); const amount=target.hp-before;
   if(amount>0) events.push({type:'heal',targetId:target.id,amount}); return amount;
 }
@@ -221,7 +229,7 @@ function statusOne(state:BattleState,actor:BattleUnit,target:BattleUnit,ability:
   const accuracy=Math.max(0,Math.min(1,(effect.accuracy ?? ability?.accuracy ?? 100)/100*accuracyMultiplier(actor)));
   if(!cannotMiss && !rng.chance(accuracy)) { events.push({type:'miss',actorId:actor.id,targetId:target.id}); return; }
   let duration=statusDuration(actor,target,ability,effect);
-  if(actor.side==='ally'&&ability?.affinity==='trick'&&state.relicIds.includes('sticky-label')&&!state.flags.stickyLabelUsed){duration+=1;state.flags.stickyLabelUsed=true;}
+  if(actor.side==='ally'&&target.side==='ally'&&POSITIVE_STATUSES.includes(effect.statusId)&&state.relicIds.includes('duct-tape'))duration+=1;
   target.statuses=applyStatus(target.statuses,effect.statusId,duration);
   events.push({type:'statusApplied',targetId:target.id,statusId:effect.statusId,duration});
 }
@@ -261,7 +269,7 @@ function prepareAbilityContext(state:BattleState,actor:BattleUnit,ability:Abilit
     }
   }
   if(ability.id==='dismissed'&&Number(actor.flags.readyTurns??0)>0) {
-    ctx.damagePowerOverride=upgradedPower(actor,ability,ability.effects.find(effect=>effect.kind==='damage')!.power)+BALANCE.saq.dismissedReadyPower;
+    ctx.outgoing*=BALANCE.saq.dismissedReadyDamageMultiplier;
     actor.flags.readyTurns=0;
     events.push({type:'ready',actorId:actor.id,active:false},{type:'message',text:'Ready spent on Dismissed.'});
   }
@@ -340,7 +348,7 @@ function resolveEffects(
           if(effect.mechanicId==='boarding-rush' && target.hp/target.maxHp<0.5) outgoing*=1.25;
           if(effect.mechanicId==='pedal-strike' && effectiveSpeed(actor)>effectiveSpeed(target)) outgoing*=1.15;
           if(effect.mechanicId==='breakaway') power+=25*Number(actor.flags.momentum??0);
-          if(effect.mechanicId==='corrective-action'&&(target.statuses.some(status=>['weaken','slow','blind','exposed'].includes(status.id))||state.effects.some(fx=>fx.id==='ink-mark'&&fx.targetUnitId===target.id)))power+=BALANCE.saq.correctiveActionBonusPower;
+          if(effect.mechanicId==='corrective-action'&&(target.statuses.some(status=>['weaken','slow','blind','exposed'].includes(status.id))||state.effects.some(fx=>fx.id==='ink-mark'&&fx.targetUnitId===target.id)))outgoing*=BALANCE.saq.correctiveActionDamageMultiplier;
           const drain=effect.mechanicId==='life-drain'?(upgraded(actor,ability!)?0.45:0.35):effect.mechanicId==='enemy-life-drain'?0.35:0;
           const shared=passesSharedMoveAccuracy(actor,target,ability,context,rng,events);if(shared===false)continue;
           const result=damageOne(state,actor,target,power,ability?.affinity ?? actor.affinity,rng,events,{cannotMiss:shared===true||context.cannotMiss,accuracy:shared===undefined?effect.accuracy??ability?.accuracy:undefined,outgoing,onHitHealPercent:drain,markConsumer:actor.side==='ally'&&ability&&target.side==='enemy'?{abilityId:ability.id,allowed:context.consumableMarkUids}:undefined});

@@ -14,7 +14,7 @@ function scenario({ withProtect = false, targetMaxHp = 100 } = {}) {
   return { state, ken, saq, hans, foe };
 }
 
-test('a hit at exactly 20% of Max HP consumes Script and prevents 10', () => {
+test('a hit at exactly 20% of Max HP consumes Script and prevents the 10 HP floor', () => {
   const { state, hans, foe } = scenario();
   const events = [];
   const damage = applyIncomingEffects(state, foe, hans, 20, events);
@@ -40,9 +40,9 @@ test('Script resolves before Protect and neither pass is applied twice', () => {
   const { state, saq, hans, foe } = scenario({ withProtect: true });
   const events = [];
   const damage = applyIncomingEffects(state, foe, hans, 40, events);
-  // Script prevents 10 leaving B=30; recipient keeps 15; R=15; transfer ceil(15/2)=8 minus 5 = 3.
-  assert.equal(damage, 15);
-  assert.equal(saq.hp, 113);
+  // Script prevents 30% of 40 = 12, leaving B=28; recipient keeps 14; R=14; transfer ceil(14/2)=7 minus 5 = 2.
+  assert.equal(damage, 14);
+  assert.equal(saq.hp, 114);
   assert.equal(events.filter(e => e.type === 'prevented').map(e => e.kind).join(','), 'script,class-monitor');
 });
 
@@ -75,7 +75,7 @@ test('Fresh Ink cannot consume the mark it is about to apply', () => {
   assert.equal(resolution.nextState.effects.filter(e => e.id === 'ink-mark').length, 1);
 });
 
-test('another ally consuming the mark adds 20 plus the 8-power passive, once per round', () => {
+test('another ally consuming the mark adds 35% plus the 15% passive, once per round', () => {
   const rng = new SeededRng(777);
   let battle = kenParty();
   const kenId = unitOf(battle, 'ken');
@@ -84,12 +84,12 @@ test('another ally consuming the mark adds 20 plus the 8-power passive, once per
   battle.effects.push({ uid: 'fx-mark', id: 'ink-mark', sourceUnitId: kenId, targetUnitId: foeId, expiry: 'source-turn-start', remaining: 2 });
   battle = advanceTo(battle, michaelId, rng);
   const resolution = resolveBattleCommand(battle, { kind: 'skill', actorId: michaelId, abilityId: 'rifle-burst', targetIds: [foeId] }, rng);
-  assert.ok(resolution.events.some(e => e.type === 'message' && e.text.includes('28 power')), 'mark 20 plus Collaborative Work 8');
+  assert.ok(resolution.events.some(e => e.type === 'message' && e.text.includes('50% damage')), 'mark 35% plus Collaborative Work 15%');
   assert.equal(resolution.nextState.effects.filter(e => e.id === 'ink-mark').length, 0);
   assert.equal(Number(resolution.nextState.units[kenId].flags.collaborativeWorkRound), battle.round);
 });
 
-test('Ken consuming his own mark gets 20 and does not trigger his passive', () => {
+test('Ken consuming his own mark gets 35% and does not trigger his passive', () => {
   const rng = new SeededRng(777);
   let battle = kenParty();
   const kenId = unitOf(battle, 'ken');
@@ -97,9 +97,9 @@ test('Ken consuming his own mark gets 20 and does not trigger his passive', () =
   battle.effects.push({ uid: 'fx-mark', id: 'ink-mark', sourceUnitId: kenId, targetUnitId: foeId, expiry: 'source-turn-start', remaining: 2 });
   battle = advanceTo(battle, kenId, rng);
   const resolution = resolveBattleCommand(battle, { kind: 'skill', actorId: kenId, abilityId: 'needlework', targetIds: [foeId] }, rng);
-  // 20 base + 20 mark + 12 Needlework = 52 on the consuming hit; the other two hits stay at 20.
-  assert.ok(resolution.events.some(e => e.type === 'message' && e.text.includes('32 power')), 'mark 20 plus Needlework 12, no passive');
-  assert.equal(resolution.events.filter(e => e.type === 'message' && e.text.includes('power')).length, 1, 'the bonus applies once per action, not per hit');
+  // The consuming hit takes 1.35 + 0.20 Needlework = 1.55x damage; the other two hits are unchanged.
+  assert.ok(resolution.events.some(e => e.type === 'message' && e.text.includes('55% damage')), 'mark 35% plus Needlework 20%, no passive');
+  assert.equal(resolution.events.filter(e => e.type === 'message' && e.text.includes('% damage')).length, 1, 'the bonus applies once per action, not per hit');
 });
 
 test('a mark cannot be consumed twice by one multi-hit action', () => {
@@ -126,15 +126,24 @@ test('Protective Script is rejected when it would add no new or later Script', (
   assert.match(verdict.reason, /already/i);
 });
 
-test('Full Sleeve is rejected only when no living ally would gain anything', () => {
-  const battle = kenParty();
-  const kenId = unitOf(battle, 'ken');
-  battle.turnIndex = battle.turnOrder.indexOf(kenId);
-  for (const allyId of battle.allies) battle.effects.push({ uid: `fx-${allyId}`, id: 'script', sourceUnitId: kenId, targetUnitId: allyId, expiry: 'source-turn-start', remaining: 2 });
-  assert.equal(validatePlayerCommand(battle, { kind: 'skill', actorId: kenId, abilityId: 'full-sleeve', targetIds: [] }).legal, false);
-
-  battle.effects = battle.effects.slice(1);
-  assert.equal(validatePlayerCommand(battle, { kind: 'skill', actorId: kenId, abilityId: 'full-sleeve', targetIds: [] }).legal, true);
+test('Blackwork spends a mark Ken set himself, and hits without one', () => {
+  const foeId = kenParty().enemies[0];
+  const hit = (withMark) => {
+    const battle = kenParty();
+    const kenId = unitOf(battle, 'ken');
+    const foe = battle.units[foeId];
+    foe.hp = foe.maxHp = 9999;
+    if (withMark) battle.effects.push({ uid: 'fx-m', id: 'ink-mark', sourceUnitId: kenId, targetUnitId: foeId, expiry: 'source-turn-start', remaining: 2 });
+    battle.turnIndex = battle.turnOrder.indexOf(kenId);
+    const before = battle.units[foeId].hp;
+    const next = resolveBattleCommand(battle, { kind: 'skill', actorId: kenId, abilityId: 'blackwork', targetIds: [foeId] }, new SeededRng(31)).nextState;
+    return { dealt: before - next.units[foeId].hp, marks: next.effects.filter(e => e.id === 'ink-mark').length };
+  };
+  const bare = hit(false);
+  const marked = hit(true);
+  assert.equal(bare.dealt > 0, true, 'Blackwork must stay usable with no mark standing');
+  assert.equal(marked.marks, 0, 'Blackwork left the mark unspent');
+  assert.equal(marked.dealt > bare.dealt, true, `mark added nothing: ${bare.dealt} -> ${marked.dealt}`);
 });
 
 test('Needlework stays legal with no mark available', () => {

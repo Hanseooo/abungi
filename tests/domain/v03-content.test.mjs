@@ -2,14 +2,25 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SeededRng } from '../../.domain-build/core/rng/seededRng.js';
 import { createBattle, resolveBattleCommand } from '../../.domain-build/core/combat/battleEngine.js';
-import { getItem } from '../../.domain-build/content/items.js';
-import { getRelic } from '../../.domain-build/content/relics.js';
+import { ITEMS, getItem } from '../../.domain-build/content/items.js';
+import { RELICS, getRelic } from '../../.domain-build/content/relics.js';
 import { createRun } from '../../.domain-build/core/progression/run.js';
 import { generateReward, claimReward } from '../../.domain-build/core/progression/rewards.js';
 import { applyEventChoice, canChooseEvent } from '../../.domain-build/core/progression/events.js';
 
 const party = ['earl', 'hans', 'leandre'];
 const startBattle = (options = {}) => createBattle(party, 'normal-fastlane', new SeededRng(777), { coins: 30, ...options });
+
+test('recovery expansion adds exactly two items and three relics', () => {
+  assert.equal(ITEMS.length, 13);
+  assert.equal(RELICS.length, 19);
+  assert.deepEqual(getItem('emergency-wrap').effects, [
+    { kind: 'healPercent', percent: 0.20 },
+    { kind: 'status', statusId: 'fortified', duration: 2 },
+  ]);
+  assert.equal(getItem('purge-pack').effects[0].kind, 'cleanse');
+  assert.equal(getRelic('second-wind').value, 0.15);
+});
 
 test('Circuit Brew restores PP to the lowest-PP move of every living ally', () => {
   const item = getItem('circuit-brew');
@@ -53,13 +64,13 @@ test('Brick in a Sock damages one enemy at neutral affinity, so anyone can throw
   assert.equal(damage.affinity, 'normal', 'a thrown object must never take an affinity multiplier');
 });
 
-test('PP Cache restores a slice of missing party PP when claimed', () => {
+test('PP Cache restores flat PP to each ally’s most-drained move when claimed', () => {
   const run = createRun(party, 31337);
   run.party[0].abilityPP['knuckle-up'] = 2;
 
   const reward = {
     tier: 'normal', coins: 0, relicChoices: [], upgradeChoices: [],
-    spoilsChoices: [{ id: 'ppcache', label: 'PP Cache', description: 'Restore 10% of missing PP across the party.', ppPercent: 0.10 }],
+    spoilsChoices: [{ id: 'ppcache', label: 'PP Cache', description: 'Restore 2 PP to the most-drained move.', ppAmount: 2 }],
   };
   const next = claimReward(run, reward, { spoilsId: 'ppcache' });
   assert.equal(next.party[0].abilityPP['knuckle-up'], 4);
@@ -147,4 +158,15 @@ test('Bulk Deal requires room for both consumables before charging the party', (
   assert.equal(result.run.inventory.reduce((sum, entry) => sum + entry.quantity, 0), 6);
   assert.equal(result.run.inventory.find(entry => entry.itemId === 'field-ration')?.quantity, 2);
   assert.equal(result.run.inventory.find(entry => entry.itemId === 'pp-tonic')?.quantity, 2);
+});
+
+test('enemies that outspeed the party report their opening turn instead of applying it silently', () => {
+  const openingEvents = [];
+  const battle = createBattle(party, 'normal-fastlane', new SeededRng(777), { coins: 0, openingEvents });
+
+  assert.ok(openingEvents.some(event => event.type === 'actionStart'), 'expected an opening enemy action');
+  const dealt = openingEvents.filter(event => event.type === 'damage').reduce((sum, event) => sum + event.amount, 0);
+  const lost = battle.allies.reduce((sum, id) => sum + (battle.units[id].maxHp - battle.units[id].hp), 0);
+  assert.ok(lost > 0, 'expected the party to start the fight already damaged');
+  assert.equal(dealt, lost);
 });

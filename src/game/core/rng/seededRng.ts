@@ -2,6 +2,15 @@ export interface SerializedRng { seed: number; state: number }
 
 const normalize = (value: number) => (value >>> 0) || 0x6d2b79f5;
 
+export function hashText(text:string):number {
+  let hash = 2166136261;
+  for (const char of text) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
 export class SeededRng {
   readonly seed: number;
   private state: number;

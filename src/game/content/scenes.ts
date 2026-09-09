@@ -28,6 +28,8 @@ const SCENES:SceneDefinition[]=[
     {id:'depart-b',lines:[{speaker:'Narrator',text:'The table quiets. Three cutouts lean forward, and the first route unfolds.'}]},
   ],relationshipVariants:[{relationshipId:'saq-departure',requiresPartyId:'saq',companionAssetId:'character-saq',variants:[
     {id:'depart-saq',relationshipId:'saq-departure',lines:[{speaker:'Saq',text:'Keep close. You can argue when we are somewhere safer.'}]},
+  ]},{relationshipId:'ken-departure',requiresPartyId:'ken',companionAssetId:'character-ken',variants:[
+    {id:'depart-ken',relationshipId:'ken-departure',lines:[{speaker:'Ken',text:'Give me a moment. I want to get the lines right.'}]},
   ]}]},
   {id:'region-1-intro',title:'The First Fold',kicker:'REGION I',variants:[
     {id:'r1-a',lines:[{speaker:'Narrator',text:'Cardboard alleys rise from the table. Somewhere ahead, something hungry is waiting.'}]},
@@ -42,7 +44,9 @@ const SCENES:SceneDefinition[]=[
   {id:'region-3-intro',title:'Behind the Gate',kicker:'REGION III',variants:[
     {id:'r3-a',lines:[{speaker:'Narrator',text:'Metal braces clamp onto the stage. The final route has fewer places to hide.'}]},
     {id:'r3-b',lines:[{speaker:'Narrator',text:'The last backdrop locks upright. Every saved item suddenly feels heavier.'}]},
-  ]},
+  ],relationshipVariants:[{relationshipId:'ken-region',requiresPartyId:'ken',companionAssetId:'character-ken',variants:[
+    {id:'r3-ken',relationshipId:'ken-region',lines:[{speaker:'Ken',text:'Different paper. Same bad workmanship.'}]},
+  ]}]},
   {id:'elite-intro',title:'Heavy Footsteps',kicker:'ELITE',variants:[
     {id:'elite-a',lines:[{speaker:'Narrator',text:'The table shakes once. This one is worth more because it can take more from you.'}]},
     {id:'elite-b',lines:[{speaker:'Narrator',text:'A reinforced cutout blocks the lane. Turning back is no longer an option.'}]},
@@ -54,6 +58,8 @@ const SCENES:SceneDefinition[]=[
     {id:'jonlow-jiro-a',relationshipId:'siblings-jonlow-jiro',lines:[{speaker:'Jonlow',text:"I can't live without my brother."},{speaker:'Jiro',text:'Then stop making me clean up after you.'}]},
     {id:'jonlow-jiro-b',relationshipId:'siblings-jonlow-jiro',lines:[{speaker:'Jonlow',text:'Bring my brother home.'},{speaker:'Jiro',text:'I came here on purpose, Jonlow.'}]},
     {id:'jonlow-jiro-c',relationshipId:'siblings-jonlow-jiro',lines:[{speaker:'Jonlow',text:'Cook for me, brother.'},{speaker:'Jiro',text:'Not until you learn some manners.'}]},
+  ]},{relationshipId:'ken-jonlow',requiresPartyId:'ken',companionAssetId:'character-ken',variants:[
+    {id:'jonlow-ken',relationshipId:'ken-jonlow',lines:[{speaker:'Jonlow',text:'You will do.'},{speaker:'Ken',text:'Somebody drew you badly and never fixed it.'}]},
   ]}]},
   {id:'boss-klyde-intro',title:'Klyde, the Psycho',kicker:'BOSS',focusAssetId:'boss-klyde',variants:[
     {id:'klyde-a',lines:[{speaker:'Klyde',text:'Pick a direction. I will be there first.'}]},
@@ -118,6 +124,7 @@ const EVENT_ARRIVAL_LINES:Record<string,SceneVariant[]> = {
   'paper-shrine': [
     {id:'shrine-a',lines:[{speaker:'Narrator',text:'Folded tokens sway even though the alley has gone still.'}]},
     {id:'shrine-b',lines:[{speaker:'Whisper',text:'Leave something. Take something. Do not pretend those are the same choice.'}]},
+    {id:'shrine-ken',lines:[{speaker:'Ken',text:'See the second stroke? Someone changed the original.'}]},
   ],
   'night-cart': [
     {id:'food-a',lines:[{speaker:'Vendor',text:'Hot food. Eight coins. No speeches while it gets cold.'}]},
@@ -130,6 +137,7 @@ const EVENT_ARRIVAL_LINES:Record<string,SceneVariant[]> = {
   'old-locker': [
     {id:'locker-a',lines:[{speaker:'Narrator',text:'The locker is rusted shut, except for the part that looks worth forcing.'}]},
     {id:'locker-b',lines:[{speaker:'Narrator',text:'That hinge looks ready to charge somebody in blood.'}]},
+    {id:'locker-ken',lines:[{speaker:'Ken',text:'The latch has a seam. Forcing it is just the loud option.'}]},
   ],
   'street-game': [
     {id:'wheel-a',lines:[{speaker:'Stranger',text:'Pick a stake. The odds are written on the cardboard.'}]},

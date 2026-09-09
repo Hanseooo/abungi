@@ -6,7 +6,9 @@ import { applyRestChoice, previewRestChoice } from '../../.domain-build/core/pro
 import { generateReward, claimReward } from '../../.domain-build/core/progression/rewards.js';
 import { generateShopOffers, purchaseShopOffer } from '../../.domain-build/core/progression/shop.js';
 import { applyEventChoice, canChooseEvent } from '../../.domain-build/core/progression/events.js';
+import { inventoryCount } from '../../.domain-build/core/progression/inventory.js';
 import { availableRouteNodes } from '../../.domain-build/core/progression/route.js';
+import { createSaveEnvelope, migrateSaveEnvelope, DEFAULT_PROFILE, DEFAULT_SETTINGS } from '../../.domain-build/core/save/saveFormat.js';
 
 test('new run starts with exactly three persistent party members and a seeded route',()=>{
   const run=createRun(['earl','hans','leandre'],2345);
@@ -46,14 +48,87 @@ test('shop is deterministic and Leandre adds one inventory choice',()=>{
   const withMerchant=createRun(['leandre','earl','hans'],500);
   const withoutMerchant=createRun(['earl','hans','marcus'],500);
   const a=generateShopOffers(withMerchant,'node-x');const b=generateShopOffers(withMerchant,'node-x');
-  assert.deepEqual(a,b); assert.equal(a.length,5); assert.equal(generateShopOffers(withoutMerchant,'node-x').length,4);
+  const base=generateShopOffers(withoutMerchant,'node-x');
+  assert.deepEqual(a,b); assert.equal(a.length,5); assert.equal(base.length,4);
+  assert.deepEqual(a.slice(0,4),base);
+  assert.equal(a[4].kind,'item');
 });
 
-test('shop purchase spends coins and adds a consumable while respecting capacity',()=>{
-  let run=createRun(['earl','hans','marcus'],10);run.coins=200;
-  const offer=generateShopOffers(run,'node-shop').find(o=>o.kind==='item');assert.ok(offer);
-  const result=purchaseShopOffer(run,offer.id,generateShopOffers(run,'node-shop'));
-  assert.equal(result.ok,true); assert.ok(result.run.coins<200); assert.ok(result.run.inventory.some(i=>i.itemId===offer.contentId));
+function createRunAtShop(){
+  for(let seed=1;seed<=1_000;seed+=1){
+    const run=createRun(['earl','hans','marcus'],seed);
+    const shop=run.route.nodes.find(node=>node.type==='shop');
+    if(!shop)continue;
+    run.currentNodeId=shop.id;
+    run.shopVisit={nodeId:shop.id,offers:generateShopOffers(run,shop.id),purchasedOfferIds:[]};
+    return run;
+  }
+  throw new Error('Expected a seeded route with a shop.');
+}
+
+test('shop purchase uses the saved shelf and rejects a serialized replay',()=>{
+  const run=createRunAtShop();
+  run.coins=200;
+  const offer=run.shopVisit.offers.find(candidate=>candidate.kind==='item');
+  assert.ok(offer);
+  const shelf=structuredClone(run.shopVisit.offers);
+  const beforeCoins=run.coins;
+  const beforeCount=inventoryCount(run);
+  const bought=purchaseShopOffer(run,offer.id);
+  assert.equal(bought.ok,true);
+  assert.equal(bought.run.coins,beforeCoins-offer.price);
+  assert.equal(inventoryCount(bought.run),beforeCount+1);
+  assert.deepEqual(bought.run.shopVisit.offers,shelf);
+  assert.deepEqual(bought.run.shopVisit.purchasedOfferIds,[offer.id]);
+  const replay=purchaseShopOffer(bought.run,offer.id);
+  assert.equal(replay.ok,false);
+  assert.match(replay.reason,/sold out/i);
+  assert.deepEqual(replay.run,bought.run);
+  const saved=createSaveEnvelope({activeRun:bought.run,profile:DEFAULT_PROFILE,settings:DEFAULT_SETTINGS},1);
+  const resumed=migrateSaveEnvelope(saved).payload.activeRun;
+  const replayAfterResume=purchaseShopOffer(resumed,offer.id);
+  assert.equal(replayAfterResume.ok,false);
+  assert.match(replayAfterResume.reason,/sold out/i);
+});
+
+test('shop rejects unknown and completed-shop purchase requests without mutation',()=>{
+  const run=createRunAtShop();
+  const before=structuredClone(run);
+  const unknown=purchaseShopOffer(run,'unknown-offer');
+  assert.equal(unknown.ok,false);
+  assert.deepEqual(unknown.run,before);
+  const completed=structuredClone(run);
+  completed.completedNodeIds.push(completed.currentNodeId);
+  const completedBefore=structuredClone(completed);
+  const result=purchaseShopOffer(completed,completed.shopVisit.offers[0].id);
+  assert.equal(result.ok,false);
+  assert.deepEqual(result.run,completedBefore);
+});
+
+test('Deep Pockets allows the complete paid two-item grant',()=>{
+  const run=createRun(['earl','hans','leandre'],901);
+  run.coins=20;
+  run.inventory=[{itemId:'patch-kit',quantity:4},{itemId:'pp-tonic',quantity:1}];
+  run.relicIds=['deep-pockets'];
+  const result=applyEventChoice(run,'bulk-deal','buy',new SeededRng(4));
+  assert.equal(result.run.coins,0);
+  assert.equal(inventoryCount(result.run),7);
+  assert.equal(result.run.inventory.find(x=>x.itemId==='field-ration').quantity,1);
+  assert.equal(result.run.inventory.find(x=>x.itemId==='pp-tonic').quantity,2);
+  assert.equal(inventoryCount(run),5);
+});
+
+test('paid Bulk Deal rejects one free slot without charging or granting',()=>{
+  const run=createRun(['earl','hans','leandre'],901);
+  run.coins=20;
+  run.inventory=[{itemId:'patch-kit',quantity:5}];
+  const before=structuredClone(run);
+  const rng=new SeededRng(4);
+  const rngBefore=rng.serialize();
+  assert.equal(canChooseEvent(run,'bulk-deal','buy').allowed,false);
+  assert.throws(()=>applyEventChoice(run,'bulk-deal','buy',rng),/room|full/i);
+  assert.deepEqual(run,before);
+  assert.deepEqual(rng.serialize(),rngBefore);
 });
 
 test('elite reward offers three relic choices and an upgrade opportunity',()=>{
@@ -85,14 +160,14 @@ test('completing nodes advances availability and three boss transitions finish t
 });
 
 
-test('street-game wager requires five coins and resolves seeded visible risk',()=>{
-  let poor=createRun(['earl','hans','leandre'],901);poor.coins=4;
-  assert.deepEqual(canChooseEvent(poor,'street-game','play'),{allowed:false,reason:'Need 5 coins.'});
+test('street-game Small stake requires six coins and resolves seeded visible risk',()=>{
+  let poor=createRun(['earl','hans','leandre'],901);poor.coins=5;
+  assert.deepEqual(canChooseEvent(poor,'street-game','play'),{allowed:false,reason:'Need 6 coins.'});
   let run=createRun(['earl','hans','leandre'],902);run.coins=12;
   const a=applyEventChoice(run,'street-game','play',new SeededRng(7));
   const b=applyEventChoice(run,'street-game','play',new SeededRng(7));
   assert.equal(a.run.coins,b.run.coins);
-  assert.ok([7,17].includes(a.run.coins));
+  assert.ok([6,20].includes(a.run.coins));
   assert.match(a.resultText,/win|lose|wager|cup/i);
 });
 
@@ -101,6 +176,15 @@ test('normal rewards do not advertise an item when inventory is already full',()
   run.inventory=[{itemId:'patch-kit',quantity:6}];
   const reward=generateReward(run,'normal',new SeededRng(1));
   assert.equal(reward.itemId,undefined);
+});
+
+test('Deep Pockets permits a sixth item but blocks an eighth reward item',()=>{
+  const run=createRun(['earl','hans','marcus'],903);
+  run.relicIds=['deep-pockets'];
+  run.inventory=[{itemId:'patch-kit',quantity:6}];
+  assert.notEqual(generateReward(run,'normal',new SeededRng(1)).itemId,undefined);
+  run.inventory[0].quantity=7;
+  assert.equal(generateReward(run,'normal',new SeededRng(1)).itemId,undefined);
 });
 
 test('completion opens one interval without replaying score',()=>{

@@ -53,6 +53,7 @@ export const EVENTS: EventDefinition[] = [
   ]},
   {id:'paper-shrine',title:'Folded Tokens',theme:'shrine',category:'trade',weight:1,text:'Tiny folded paper pieces hang from a quiet frame.',choices:[
     {id:'rest',label:'Leave one and rest',hint:'Restore 22% of missing PP across the party.',resultText:'The pause clears your head.',effects:[{kind:'restoreMissingPpPercent',amount:0.22}]},
+    {id:'ken-read-work',label:'Let Ken read the work',hint:'Spend 10 coins - gain a random unowned relic.',resultText:'Ken turns the token over twice, points at the second stroke, and pays the honest price.',requiresCharacterId:'ken',effects:[{kind:'coins',amount:-10},{kind:'randomRelic'}]},
     {id:'take',label:'Offer 16 coins for a token',hint:'Spend 16 coins · gain a random unowned relic.',resultText:'The token settles into your pack with surprising weight.',effects:[{kind:'coins',amount:-16},{kind:'randomRelic'}]}
   ]},
   {id:'night-cart',title:'Night Cart',theme:'food',category:'recovery',weight:1,text:'A cart of steaming food appears where the road narrows.',choices:[
@@ -66,6 +67,7 @@ export const EVENTS: EventDefinition[] = [
   ]},
   {id:'old-locker',title:'Old Locker',theme:'locker',category:'sacrifice',weight:1,text:'A dented locker still has one working latch.',choices:[
     {id:'greg-force',label:'Let Greg force it',hint:'Lose 8% Max HP from each living ally; gain 1 Field Ration and 8 coins.',resultText:'Greg forces the latch and finds a ration with loose change.',requiresCharacterId:'greg',effects:[{kind:'partyHpPercent',amount:-0.08},{kind:'item',itemId:'field-ration'},{kind:'coins',amount:8}]},
+    {id:'ken-trace-latch',label:'Let Ken trace the latch',hint:'Lose 3% Max HP from each living ally; gain 1 Field Ration if your pack has room.',resultText:'Ken traces the latch line, finds where it gives, and opens it with less blood than usual.',requiresCharacterId:'ken',effects:[{kind:'partyHpPercent',amount:-0.03},{kind:'item',itemId:'field-ration'}]},
     {id:'force',label:'Force it open',hint:'Lose 5% Max HP from each living ally · gain 1 Field Ration if space permits.',resultText:'Inside is a field ration. The rust takes its own payment.',effects:[{kind:'partyHpPercent',amount:-0.05},{kind:'item',itemId:'field-ration'}]},
     {id:'leave',label:'Leave it alone',hint:'No cost · no reward.',resultText:'Nothing happens. Sometimes that is fine.',effects:[]}
   ]},

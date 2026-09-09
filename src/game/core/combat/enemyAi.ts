@@ -62,6 +62,10 @@ export function chooseEnemyTargets(state: BattleState, actor: BattleUnit, move: 
     }
     return [rng.pick(friends).id];
   }
+  // A standing Taunt takes every single-target attack, so drawing fire is a decision the
+  // player can read rather than a weighting they have to infer.
+  const taunted = foes.find(unit => state.effects.some(effect => effect.id === 'taunt' && effect.targetUnitId === unit.id));
+  if (taunted) return [taunted.id];
   if (mode === 'random-enemy') return [rng.pick(foes).id];
   // Enemy-one defaults to a learnable weighted pressure pattern: usually lowest HP, occasionally another target.
   if (rng.chance(0.65)) return [[...foes].sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0].id];

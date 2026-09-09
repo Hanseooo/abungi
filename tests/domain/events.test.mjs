@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SeededRng, hashText } from '../../.domain-build/core/rng/seededRng.js';
 import { EVENTS, getEvent } from '../../.domain-build/content/events.js';
-import { getRelic } from '../../.domain-build/content/relics.js';
+import { RELICS, getRelic } from '../../.domain-build/content/relics.js';
 import { createRun, advanceRegion } from '../../.domain-build/core/progression/run.js';
 import { generateRegionRoute, minimumCombatNodesToBoss, validateRoute } from '../../.domain-build/core/progression/route.js';
 import { applyEventChoice, canChooseEvent, deriveEventOffers, previewEventChoice, previewRecruitment } from '../../.domain-build/core/progression/events.js';
+import { eligibleRelics } from '../../.domain-build/core/progression/relicDrafts.js';
 
 test('event routes replay from the run seed and avoid ordinary repeats before exhaustion', () => {
   const baseline = [0, 1, 2].map(region => generateRegionRoute(region, new SeededRng(913)));
@@ -31,21 +32,27 @@ test('event routes replay from the run seed and avoid ordinary repeats before ex
   assert.deepEqual(run.route, baseline[2]);
 });
 
-test('event assignment exhaustion falls back to eligible content', () => {
+// The guaranteed pre-boss Rest lane removed one event-eligible slot per region, so a run can now
+// generate at most 13 event nodes against a 14-event pool. Exhaustion is therefore unreachable by
+// generation and no run can repeat an ordinary event; makeNode keeps its empty-pool fallback as a
+// guard for a future content cut. This test pins the property that makes the fallback unreachable.
+test('no run can exhaust the event pool, so ordinary events never repeat', () => {
   const pool = EVENTS.filter(event => event.weight > 0 && event.id !== 'fourth-chair');
-  let foundExhaustion = false;
-  for (let seed = 1; seed <= 20000 && !foundExhaustion; seed += 1) {
+  let mostSeen = 0;
+  for (let seed = 1; seed <= 20000; seed += 1) {
     let run = createRun(['earl', 'hans', 'marcus'], seed);
     const ids = [];
     for (let region = 0; region < 3; region += 1) {
       ids.push(...run.route.nodes.filter(node => node.type === 'event').map(node => node.eventId));
       if (region < 2) run = advanceRegion(run);
     }
-    assert.equal(new Set(ids.slice(0, pool.length)).size, Math.min(ids.length, pool.length));
-    for (const id of ids) assert.ok(id === 'fourth-chair' || pool.some(event => event.id === id));
-    foundExhaustion = ids.length >= pool.length;
+    for (const id of ids) assert.ok(id === 'fourth-chair' || pool.some(event => event.id === id), `seed ${seed}: ${id} is not eligible content`);
+    const ordinary = ids.filter(id => id !== 'fourth-chair');
+    assert.equal(new Set(ordinary).size, ordinary.length, `seed ${seed} repeated an ordinary event`);
+    assert.ok(ids.length < pool.length, `seed ${seed} generated ${ids.length} event nodes against a ${pool.length}-event pool`);
+    mostSeen = Math.max(mostSeen, ids.length);
   }
-  assert.equal(foundExhaustion, true, 'seed sweep must exercise pool exhaustion');
+  assert.ok(mostSeen >= 10, `sweep only ever reached ${mostSeen} event nodes; it is no longer exercising a busy route`);
 });
 
 test('event preview applies living-only HP rounding without changing the source run', () => {
@@ -63,7 +70,11 @@ test('event offers require a generated event node and leave the run RNG unchange
     const node = run.route.nodes.find(candidate => candidate.type === 'event');
     if (node) {
       const before = structuredClone(run);
-      assert.deepEqual(deriveEventOffers(run, node.id), { itemIds: [], upgrades: [], recruitIds: [] });
+      const offers = deriveEventOffers(run, node.id);
+      assert.ok(Array.isArray(offers.itemIds) && Array.isArray(offers.upgrades) && Array.isArray(offers.recruitIds));
+      assert.deepEqual(run, before, 'deriving offers must not advance the run or its RNG');
+      const battle = run.route.nodes.find(candidate => candidate.type === 'battle');
+      assert.throws(() => deriveEventOffers(run, battle.id), /route event node/);
       assert.deepEqual(run, before);
       return;
     }
@@ -250,7 +261,7 @@ test('event press rejects Rare input and exhausted Common stock before consuming
   assert.deepEqual(rng.serialize(), rngBefore);
 
   const exhausted = runAtEvent('the-press');
-  exhausted.relicIds = ['cardboard-plate', 'red-stitch', 'copper-trace', 'violet-thread', 'marked-card', 'sticky-label', 'first-aid-tape', 'reinforced-stance'];
+  exhausted.relicIds = RELICS.filter(relic => relic.rarity === 'common').map(relic => relic.id);
   const exhaustedRng = new SeededRng(5);
   assert.equal(canChooseEvent(exhausted, 'the-press', 'safe',
     { kind: 'pressRelic', relicId: 'cardboard-plate' }).allowed, false);
@@ -313,4 +324,42 @@ test('saq-organize grants six more coins than helping pack, and no items', () =>
 test('bulk-deal still offers its existing free-of-Saq choices', () => {
   const ids = getEvent('bulk-deal').choices.map(c => c.id);
   assert.deepEqual(ids.filter(id => id !== 'saq-organize'), ['leandre-crate', 'buy', 'help']);
+});
+
+test('Ken event variants apply their exact discounts and preserve existing outcomes', () => {
+  const shrine = getEvent('paper-shrine');
+  const base = shrine.choices.find(c => c.id === 'take');
+  const ken = shrine.choices.find(c => c.id === 'ken-read-work');
+  assert.equal(ken.requiresCharacterId, 'ken');
+  assert.deepEqual(ken.effects, [{ kind: 'coins', amount: -10 }, { kind: 'randomRelic' }]);
+  assert.equal(base.effects[0].amount, -16);
+  const run = runAtEvent('paper-shrine', ['ken', 'hans', 'marcus']);
+  run.coins = 40;
+  const kenResult = applyEventChoice(run, 'paper-shrine', 'ken-read-work', new SeededRng(9));
+  const baseResult = applyEventChoice(run, 'paper-shrine', 'take', new SeededRng(9));
+  assert.deepEqual(kenResult.run.relicIds, baseResult.run.relicIds);
+  assert.equal(kenResult.run.coins, baseResult.run.coins + 6);
+
+  const locker = getEvent('old-locker');
+  const trace = locker.choices.find(c => c.id === 'ken-trace-latch');
+  assert.equal(trace.requiresCharacterId, 'ken');
+  assert.deepEqual(trace.effects, [{ kind: 'partyHpPercent', amount: -0.03 }, { kind: 'item', itemId: 'field-ration' }]);
+  assert.equal(locker.choices.find(c => c.id === 'force').effects[0].amount, -0.05);
+});
+
+test('Ken event variants preserve relic exhaustion, pack capacity and Greg coexistence', () => {
+  const shrine = runAtEvent('paper-shrine', ['ken', 'hans', 'marcus']);
+  shrine.coins = 40;
+  shrine.relicIds = eligibleRelics(shrine, 'folded-tokens').map(relic => relic.id);
+  assert.match(canChooseEvent(shrine, 'paper-shrine', 'ken-read-work').reason, /already own every relic/i);
+
+  const locker = runAtEvent('old-locker', ['ken', 'greg', 'marcus']);
+  locker.inventory = [{ itemId: 'patch-kit', quantity: 6 }];
+  assert.match(canChooseEvent(locker, 'old-locker', 'ken-trace-latch').reason, /pack is too full/i);
+  locker.inventory = [];
+  const eligible = getEvent('old-locker').choices.filter(c => canChooseEvent(locker, 'old-locker', c.id).allowed).map(c => c.id);
+  assert.deepEqual(eligible, ['greg-force', 'ken-trace-latch', 'force', 'leave']);
+  const result = applyEventChoice(locker, 'old-locker', 'ken-trace-latch', new SeededRng(3));
+  assert.equal(result.run.coins, locker.coins);
+  assert.equal(result.run.inventory.find(entry => entry.itemId === 'field-ration').quantity, 1);
 });

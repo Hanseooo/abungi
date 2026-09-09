@@ -1,5 +1,6 @@
 import type { ProfileState, RunState, SettingsState, ShopVisit } from '../types.js';
 import { generateShopOffers } from '../progression/shop.js';
+import { RELICS } from '../../content/relics.js';
 
 export const SAVE_SCHEMA_VERSION = 3 as const;
 export const DEFAULT_PROFILE:ProfileState={runsStarted:0,wins:0,bestScore:0,bossesDefeated:0,discoveredRelics:[],discoveredEnemies:[],characterUsage:{}};
@@ -55,6 +56,26 @@ function migrateRunV2toV3(run:unknown):RunState {
   return {...r, activeBattle:{...r.activeBattle, effects:Array.isArray(r.activeBattle.effects)?r.activeBattle.effects:[]}};
 }
 
+const KNOWN_RELIC_IDS=new Set(RELICS.map(relic=>relic.id));
+const keepKnownRelics=(ids:unknown):string[]=>Array.isArray(ids)?ids.filter((id):id is string=>typeof id==='string'&&KNOWN_RELIC_IDS.has(id)):[];
+
+/**
+ * Relics removed by a content update would otherwise reach getRelic and throw, turning an old save
+ * into a corrupt one. Runs on every load, not behind a schema bump, so the next content change is
+ * covered too.
+ */
+function dropRetiredRelics(payload:SavePayload):SavePayload{
+  const run=payload.activeRun;
+  const profile={...payload.profile,discoveredRelics:keepKnownRelics(payload.profile?.discoveredRelics)};
+  if(!run) return {...payload,profile};
+  return {...payload,profile,activeRun:{
+    ...run,
+    relicIds:keepKnownRelics(run.relicIds),
+    activeBattle:run.activeBattle?{...run.activeBattle,relicIds:keepKnownRelics(run.activeBattle.relicIds)}:run.activeBattle,
+    pendingReward:run.pendingReward?{...run.pendingReward,relicChoices:keepKnownRelics(run.pendingReward.relicChoices)}:run.pendingReward,
+  }};
+}
+
 export function migrateSaveEnvelope(raw:unknown):SaveEnvelopeV3{
   if(!isRecord(raw))throw new Error('Save is corrupt or unreadable.');
   const version=raw.schemaVersion;
@@ -77,10 +98,10 @@ export function migrateSaveEnvelope(raw:unknown):SaveEnvelopeV3{
     if(typeof v2.timestamp!=='string'||typeof v2.revision!=='number'||!isRecord(v2.payload))
       throw new Error('Save validation failed: V2 envelope is malformed.');
     const run=v2.payload.activeRun;
-    return {schemaVersion:3,timestamp:v2.timestamp,revision:v2.revision,payload:{...v2.payload,activeRun:run?migrateRunV2toV3(run):null}};
+    return {schemaVersion:3,timestamp:v2.timestamp,revision:v2.revision,payload:dropRetiredRelics({...v2.payload,activeRun:run?migrateRunV2toV3(run):null})};
   }
 
   const verdict=validateSaveShape(envelope);
   if(!verdict.valid)throw new Error(`Save validation failed: ${verdict.errors.join(' ')}`);
-  return envelope;
+  return {...envelope,payload:dropRetiredRelics(envelope.payload)};
 }

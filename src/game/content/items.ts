@@ -38,6 +38,8 @@ export const ITEMS: ItemDefinition[] = [
   {id:'circuit-brew',name:'Circuit Brew',description:'Restore 3 PP to the lowest-PP move of every living ally.',target:'ally-all',price:30,rarity:'uncommon',category:'resource',fieldCompatible:true,effects:[{kind:'restorePP',amount:3}]},
   {id:'brick-in-a-sock',name:'Brick in a Sock',description:'Throw for 65 power at one enemy. No affinity, no PP, anyone can use it.',target:'enemy-one',price:22,rarity:'common',category:'tactical',battleOnly:true,effects:[{kind:'damage',power:65}]},
   {id:'revive-kit',name:'Revive Kit',description:'Revive one KO ally at 30% Max HP. Cannot rescue the party after total defeat.',target:'ally-one',price:56,rarity:'rare',category:'revive',fieldCompatible:true,targetKo:true,effects:[{kind:'revive',percentMaxHp:0.30}]},
+  {id:'purge-pack',name:'Purge Pack',description:'Remove all negative statuses from every living ally. Battle only.',target:'ally-all',price:32,rarity:'rare',category:'utility',battleOnly:true,fieldCompatible:false,effects:[{kind:'cleanse',count:4}]},
+  {id:'emergency-wrap',name:'Emergency Wrap',description:'Restore 20% Max HP to one living ally and grant Fortified for two turns.',target:'ally-one',price:22,rarity:'uncommon',category:'recovery',battleOnly:true,fieldCompatible:false,effects:[{kind:'healPercent',percent:0.20},{kind:'status',statusId:'fortified',duration:2}]},
 ];
 
 const map = new Map(ITEMS.map(item => [item.id,item]));

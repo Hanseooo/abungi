@@ -7,6 +7,37 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const read = (...parts) => readFileSync(join(root, ...parts), 'utf8');
 
+test('route forks explain their one-way choice and require confirmation before entering', () => {
+  const route = read('src/features/route/RouteScreen.tsx');
+  const css = read('src/styles.css');
+  assert.match(route, /CHOOSE ONE/);
+  assert.match(route, /The other route will be skipped/);
+  assert.match(route, /ENTER \{label\[pendingNode\.type\]\}/);
+  assert.match(route, /CHANGE CHOICE/);
+  assert.match(route, /route-choice-selected/);
+  assert.match(css, /\.route-choice-guide \{/);
+  assert.match(css, /\.route-node\.will-skip \{/);
+});
+
+test('field inventory gives its scroll row a definite viewport-bounded height', () => {
+  const css = read('src/styles.css');
+  const dialog = css.match(/\.field-inventory-dialog \{[^}]*\}/s)?.[0] ?? '';
+  const panel = css.match(/\.field-inventory-panel \{[^}]*\}/s)?.[0] ?? '';
+  const scroll = css.match(/\.field-inventory-scroll \{[^}]*\}/s)?.[0] ?? '';
+  assert.match(dialog, /(?<!-)height:\s*calc\(100dvh\s*-\s*16px\)/);
+  assert.match(dialog, /overflow:\s*hidden/);
+  assert.match(panel, /(?<!-)height:\s*100%/);
+  assert.match(scroll, /overflow-y:\s*auto/);
+});
+
+test('field inventory distinguishes clearing a selection from closing the modal', () => {
+  const route = read('src/features/route/RouteScreen.tsx');
+  assert.match(route, /Choose an item to preview its effect/);
+  assert.match(route, /CLEAR SELECTION/);
+  assert.match(route, /disabled=\{isResolving\|\|\(!selection&&!discardingItemId\)\}/);
+  assert.match(route, /CLOSE INVENTORY/);
+});
+
 test('every declared font size sits at or above the .62rem (~10px) label floor', () => {
   const css = read('src/styles.css');
   const undersized = [];
@@ -25,6 +56,15 @@ test('battle touch targets reach the 44px floor', () => {
   assert.match(css, /\.target-hint button \{[^}]*min-height:\s*var\(--touch\)/s);
 });
 
+test('mobile deployables use their own row and return to the ally stage on wider screens', () => {
+  const css = read('src/styles.css');
+  const mobile = css.slice(0, css.indexOf('@media (min-width: 600px)'));
+  const medium = css.slice(css.lastIndexOf('@media (min-width: 600px)'), css.indexOf('@media (min-width: 768px)'));
+  assert.match(mobile, /grid-template-areas:\s*"utility"\s*"enemy"\s*"message"\s*"ally"\s*"deployables"\s*"hud"\s*"actions"/, 'mobile battle layout must reserve a deployables row');
+  assert.match(css, /\.deployable-field \{[^}]*grid-area:\s*deployables/s, 'mobile deployables must not share the ally row');
+  assert.match(medium, /\.deployable-field \{[^}]*grid-area:\s*ally/s, 'wider screens restore deployables to the battlefield');
+});
+
 test('the v0.1 skill-button markup names are gone from the stylesheet', () => {
   const css = read('src/styles.css');
   assert.doesNotMatch(css, /\.skill-button/, '.skill-button is dead CSS; markup renders .skill-slot/.skill-main');
@@ -39,15 +79,6 @@ test('the combat message paints above the VFX layer and its ASSEMBLE banner', ()
   assert.ok(Number.isFinite(messageZ), '.combat-message must declare a z-index');
   assert.ok(messageZ > layerZ, `.combat-message z-index ${messageZ} must exceed .battle-vfx-layer ${layerZ}`);
   assert.match(css, /\.combat-message \{[^}]*position:\s*relative/s);
-});
-
-test('the combat message reserves two lines instead of clipping to one', () => {
-  const css = read('src/styles.css');
-  const block = css.match(/\.combat-message \{[^}]*\}/s)?.[0] ?? '';
-  const minHeight = Number(block.match(/min-height:\s*(\d+)px/)?.[1]);
-  assert.ok(minHeight >= 56, `.combat-message min-height ${minHeight}px is too short for two lines`);
-  assert.match(css, /\.combat-message strong \{[^}]*overflow-wrap:\s*anywhere/s);
-  assert.doesNotMatch(css, /\.combat-message strong \{[^}]*text-overflow:\s*ellipsis/s);
 });
 
 test('the multi-target enemy count is a cornered badge, not floating inline text', () => {

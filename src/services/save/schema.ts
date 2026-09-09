@@ -34,7 +34,7 @@ const battle=z.object({
 const partyMember=z.object({characterId:z.string(),hp:z.number(),abilityPP:z.record(z.string(),z.number()),upgradedAbilities:z.array(z.string())});
 const routeNode=z.object({id:z.string(),stage:z.number().int(),type:nodeType,encounterId:z.string().optional(),eventId:z.string().optional(),outgoing:z.array(z.string())});
 const route=z.object({regionIndex:z.number().int(),nodes:z.array(routeNode),startNodeIds:z.array(z.string()),bossNodeId:z.string()});
-const reward=z.object({tier,coins:z.number(),itemId:z.string().optional(),relicChoices:z.array(z.string()),upgradeChoices:z.array(z.object({characterId:z.string(),abilityId:z.string()})),bossRecovery:z.boolean().optional(),spoilsChoices:z.array(z.object({id:z.string(),label:z.string(),description:z.string(),coinBonus:z.number().optional(),healPercent:z.number().optional(),itemId:z.string().optional(),ppPercent:z.number().optional()})).default([])});
+const reward=z.object({tier,coins:z.number(),itemId:z.string().optional(),relicChoices:z.array(z.string()),upgradeChoices:z.array(z.object({characterId:z.string(),abilityId:z.string()})),bossRecovery:z.boolean().optional(),spoilsChoices:z.array(z.object({id:z.string(),label:z.string(),description:z.string(),coinBonus:z.number().optional(),healPercent:z.number().optional(),itemId:z.string().optional(),ppAmount:z.number().optional()})).default([])});
 
 const shopOffer=z.object({
   id:z.string(),kind:z.enum(['item','relic']),contentId:z.string(),name:z.string(),description:z.string(),

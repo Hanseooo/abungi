@@ -19,7 +19,7 @@ export interface StatusInstance {
   remaining: number;
 }
 
-export type BattleEffectId = 'protect' | 'ink-mark' | 'script' | 'taxed';
+export type BattleEffectId = 'protect' | 'ink-mark' | 'script' | 'taxed' | 'taunt';
 
 /**
  * A source-linked battle effect. Unlike StatusInstance it records who applied it,
@@ -246,7 +246,7 @@ export interface RunState {
   shopVisit: ShopVisit | null;
 }
 
-export interface RewardSpoilsChoice { id:'cash'|'patch'|'scavenge'|'ppcache'; label:string; description:string; coinBonus?:number; healPercent?:number; itemId?:string; ppPercent?:number }
+export interface RewardSpoilsChoice { id:'cash'|'patch'|'scavenge'|'ppcache'; label:string; description:string; coinBonus?:number; healPercent?:number; itemId?:string; ppAmount?:number }
 
 export interface RewardState {
   tier: EncounterTier;

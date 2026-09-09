@@ -72,3 +72,13 @@ test('v1 save with full run state migrates to v2 preserving party, inventory, up
   assert.equal(migrated.payload.profile.bestScore,500);
   assert.equal(migrated.payload.settings.animationSpeed,DEFAULT_SETTINGS.animationSpeed);
 });
+
+test('loading a save drops relics retired by a content update instead of corrupting the run',()=>{
+  const run=baseRun();
+  run.relicIds=['cardboard-plate','reinforced-stance','sticky-label'];
+  const profile={...DEFAULT_PROFILE,discoveredRelics:['lucky-centavo','thermos']};
+  const envelope=createSaveEnvelope({activeRun:run,profile,settings:DEFAULT_SETTINGS},1);
+  const loaded=migrateSaveEnvelope(JSON.parse(JSON.stringify(envelope)));
+  assert.deepEqual(loaded.payload.activeRun.relicIds,['cardboard-plate']);
+  assert.deepEqual(loaded.payload.profile.discoveredRelics,['thermos']);
+});

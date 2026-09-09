@@ -846,11 +846,11 @@ Marcus begins each battle Fortified for 1 turn.
 - 6 PP
 - applies Weaken to all enemies for 2 turns
 
-**Full Cover**
+**Seawall**
 
 - Neutral
-- 4 PP
-- entire party becomes Fortified for 1 turn
+- 5 PP
+- Marcus takes every single-target enemy attack until the start of his next turn, and becomes Fortified for 2 turns
 
 ---
 

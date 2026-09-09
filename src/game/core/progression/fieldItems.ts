@@ -31,7 +31,7 @@ export interface FieldItemPreview {
 const clone = <T>(value:T):T => JSON.parse(JSON.stringify(value)) as T;
 
 export function fieldUseLimit(run: RunState): number {
-  return 1 + (run.inventory.some(i => i.itemId === 'field-pack') ? 1 : 0);
+  return run.relicIds.includes('field-pack') ? 3 : 2;
 }
 
 function resolvedRouteCheck(run: RunState): {ok: boolean; reason?: string} {

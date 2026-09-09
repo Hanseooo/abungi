@@ -1,4 +1,4 @@
-import { createSaveEnvelope, migrateSaveEnvelope, type SaveEnvelopeV3, type SavePayload } from '../../game/core/save/saveFormat';
+import { createSaveEnvelope, migrateSaveEnvelope, SAVE_SCHEMA_VERSION, type SaveEnvelopeV3, type SavePayload } from '../../game/core/save/saveFormat';
 import { parseSaveEnvelope } from './schema';
 import type { SaveLoadResult, SaveRepository } from './SaveRepository';
 
@@ -12,12 +12,14 @@ function openDb():Promise<IDBDatabase>{
   });
 }
 function requestResult<T>(request:IDBRequest<T>):Promise<T>{return new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error??new Error('Local save operation failed.'));});}
+function transactionResult(tx:IDBTransaction, failure:string):Promise<void>{return new Promise((resolve,reject)=>{tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error(failure));tx.onabort=()=>reject(tx.error??new Error(failure));});}
 
 async function writebackMigrated(migrated:SaveEnvelopeV3):Promise<void>{
   const db=await openDb();
   const tx=db.transaction(STORE,'readwrite');
+  const committed=transactionResult(tx,'Migration writeback failed.');
   await requestResult(tx.objectStore(STORE).put(migrated,KEY));
-  await new Promise<void>((resolve,reject)=>{tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('Migration writeback failed.'));tx.onabort=()=>reject(tx.error??new Error('Migration writeback cancelled.'));});
+  await committed;
   db.close();
 }
 
@@ -30,7 +32,7 @@ export class IndexedDbSaveRepository implements SaveRepository{
         const migrated=migrateSaveEnvelope(raw);
         const save=parseSaveEnvelope(migrated);
         // Write back only if we actually migrated (version changed)
-        if((raw as {schemaVersion?:unknown}).schemaVersion!==2){
+        if((raw as {schemaVersion?:unknown}).schemaVersion!==SAVE_SCHEMA_VERSION){
           try{await writebackMigrated(save);}
           catch(e){
             const persistenceWarning='Save format updated but could not be persisted. Progress will save normally going forward.';
@@ -44,8 +46,8 @@ export class IndexedDbSaveRepository implements SaveRepository{
   }
   async save(payload:SavePayload):Promise<SaveEnvelopeV3>{
     const current=await this.load();const revision=current.kind==='ok'?current.save.revision+1:1;const envelope=parseSaveEnvelope(createSaveEnvelope(payload,revision));
-    const db=await openDb();const tx=db.transaction(STORE,'readwrite');await requestResult(tx.objectStore(STORE).put(envelope,KEY));
-    await new Promise<void>((resolve,reject)=>{tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('Local save commit failed.'));tx.onabort=()=>reject(tx.error??new Error('Local save commit was cancelled.'));});db.close();return envelope;
+    const db=await openDb();const tx=db.transaction(STORE,'readwrite');const committed=transactionResult(tx,'Local save commit failed.');await requestResult(tx.objectStore(STORE).put(envelope,KEY));
+    await committed;db.close();return envelope;
   }
   async clear():Promise<void>{const db=await openDb();const tx=db.transaction(STORE,'readwrite');await requestResult(tx.objectStore(STORE).delete(KEY));db.close();}
 }

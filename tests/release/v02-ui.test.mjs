@@ -25,7 +25,7 @@ test('v0.2 theatre and combat readability classes have concrete responsive styli
     '.deployable-field', '.deployable-piece.sentry', '.deployable-piece.repair-drone',
     '.status-aura', '.has-blind', '.has-weaken', '.has-haste', '.has-fortified',
     '.battle-vfx-layer', '.choreo-ranged', '.choreo-smoke', '.choreo-multi-hit',
-    '.shop-counter-scene', '.event-theatre', '.spoils-section', '.enemy-callout'
+    '.shop-counter-scene', '.event-theatre', '.spoils-section', '.enemy-action-ticket'
   ]) assert.match(css, new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing styles for ${selector}`);
   assert.match(css, /@media\s*\(min-width:\s*768px\)/);
   assert.match(css, /@media\s*\(min-width:\s*1024px\)/);
@@ -66,7 +66,7 @@ test('Playwright contract covers v0.2 scenes, overlay return, guide details and 
   assert.match(e2e,/dismissScenes/);
   assert.match(e2e,/party selection.*settings|settings.*party selection/is);
   assert.match(e2e,/Field Guide|GUIDE/i);
-  assert.match(e2e,/enemy.*used|ENEMY ACTION/is);
+  assert.match(e2e,/enemy.*target/is);
   for(const size of ['390, height: 844','768, height: 1024','1024, height: 768','1440, height: 900'])assert.match(e2e,new RegExp(size.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
 });
 

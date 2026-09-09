@@ -25,7 +25,9 @@ export function applyIncomingEffects(
 
   const script = findEffect(state, 'script', target.id);
   if (script && amount >= Math.ceil(BALANCE.ken.scriptThresholdPercent * target.maxHp)) {
-    const prevented = Math.min(BALANCE.ken.scriptPrevention, amount);
+    // A share of the hit rather than a flat block, so one Script keeps meaning something
+    // against a boss swing instead of shaving a fixed 10 off a region-3 hit.
+    const prevented = Math.min(Math.max(BALANCE.ken.scriptPreventFloor, Math.round(amount * BALANCE.ken.scriptPreventPercent)), amount);
     amount -= prevented;
     consumeEffect(state, script.uid, events);
     events.push({ type: 'prevented', kind: 'script', targetId: target.id, amount: prevented });

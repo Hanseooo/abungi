@@ -10,6 +10,7 @@ import { generateShopOffers } from '../../.domain-build/core/progression/shop.js
 import { ITEMS, getItem } from '../../.domain-build/content/items.js';
 import { BOSS_AFFINITY_POOLS } from '../../.domain-build/content/enemies.js';
 import { resolveScene } from '../../.domain-build/content/scenes.js';
+import { BALANCE } from '../../.domain-build/balance/constants.js';
 import { applyEventChoice, canChooseEvent as canChooseEventForV02 } from '../../.domain-build/core/progression/events.js';
 
 function actorBySource(state, sourceId) {
@@ -92,13 +93,13 @@ test('shop shelves are deterministic, unique, and include rarity metadata', () =
   assert.deepEqual(offers,generateShopOffers(run,'r1-shop-test'));
 });
 
-test('Three Cups is a seeded visible-risk wager rather than guaranteed profit', () => {
+test('Cardboard Wheel is a seeded visible-risk wager rather than guaranteed profit', () => {
   const run=createRun(['earl','hans','marcus'],601); run.coins=20;
   const a=applyEventChoice(run,'street-game','play',new SeededRng(1));
   const b=applyEventChoice(run,'street-game','play',new SeededRng(1));
   assert.equal(a.run.coins,b.run.coins);
   assert.match(a.resultText,/win|lose|cup|wager/i);
-  assert.ok([15,25].includes(a.run.coins),`unexpected result ${a.run.coins}`);
+  assert.ok([14,28].includes(a.run.coins),`unexpected result ${a.run.coins}`);
 });
 
 test('scene dialogue is seeded and relationship-aware without display-name branching', () => {
@@ -188,7 +189,7 @@ test('elite and event arrival scenes resolve to the actual encounter/event ident
   assert.ok(elite.lines.some(line=>/broker|deal|price|coin/i.test(line.text)));
 
   const event=resolveScene('event-arrival',{seed:1301,regionIndex:0,partyIds:['earl','hans','jiro'],eventId:'street-game'});
-  assert.equal(event.title,'Three Cups');
+  assert.equal(event.title,'Cardboard Wheel');
   assert.equal(event.theme,'game');
   assert.ok(event.lines.some(line=>/cup|wager|coin|odds/i.test(line.text)));
 });
@@ -234,12 +235,23 @@ test('Nathaniel Life Drain keeps sustain meaningful without erasing his health-r
   }
 });
 
-test('Three Cups is a variance choice, not a positive-expectation vending machine',()=>{
+test('Cardboard Wheel Small stake retains its tuned positive expected value',()=>{
   let total=0;
   for(let seed=1;seed<=1000;seed++){
     const run=createRun(['earl','hans','marcus'],1600+seed);run.coins=20;
     total+=applyEventChoice(run,'street-game','play',new SeededRng(seed)).run.coins;
   }
   const average=total/1000;
-  assert.ok(average>=19.4&&average<=20.6,`expected a near-fair wager, got average ${average.toFixed(2)} coins from 20`);
+  assert.ok(average>=21.1&&average<=22.3,`expected the tuned positive wager, got average ${average.toFixed(2)} coins from 20`);
+});
+
+test('every region offers a Rest lane on the last stage before the boss', () => {
+  for(let seed=1;seed<=500;seed+=1){
+    const route=generateRegionRoute(seed%3,new SeededRng(seed));
+    const finalStage=route.nodes.filter(node=>node.stage===BALANCE.routeStagesBeforeBoss-1);
+    assert.equal(finalStage.length,2,`seed ${seed}: expected two pre-boss lanes`);
+    assert.ok(finalStage.some(node=>node.type==='rest'),`seed ${seed}: no Rest lane before the boss`);
+    assert.ok(finalStage.some(node=>node.type!=='rest'),`seed ${seed}: the pre-boss choice collapsed to two Rests`);
+    assert.ok(minimumCombatNodesToBoss(route)>=2,`seed ${seed}: fewer than two forced fights`);
+  }
 });

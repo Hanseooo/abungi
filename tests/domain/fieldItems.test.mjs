@@ -50,12 +50,12 @@ test('discarding an item removes one quantity without spending a field use',()=>
   assert.equal(stale.ok,false);
 });
 
-test('fieldUseLimit returns 1 base and fieldAccess gates correctly',()=>{
+test('fieldUseLimit returns 2 base and fieldAccess gates correctly',()=>{
   let run=createRun(['earl','hans','leandre'],58);
-  assert.equal(fieldUseLimit(run),1);
+  assert.equal(fieldUseLimit(run),2);
   assert.equal(fieldAccess(run).legal,false); // no completed node yet
   run=completeRouteNode(run,run.route.startNodeIds[0]);
   assert.equal(fieldAccess(run).legal,true);
-  run.fieldUsesSpent=1;
+  run.fieldUsesSpent=2;
   assert.equal(fieldAccess(run).legal,false); // uses exhausted
 });

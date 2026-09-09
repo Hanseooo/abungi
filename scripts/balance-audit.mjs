@@ -75,7 +75,7 @@ function scoreAbility(battle,actor,ability,targetId){
   if(ability.id==='double-down'&&hpRatio(actor)<.3)score-=45;
   if(ability.id==='life-drain'&&hpRatio(actor)<.62)score+=45;
   if(ability.id==='chefs-table'&&allies.filter(a=>hpRatio(a)<.8).length>=2)score+=70;
-  if(ability.id==='full-cover'&&allies.filter(a=>statusRemaining(a,'fortified')===0).length>=2&&battle.tier!=='normal')score+=55;
+  if(ability.id==='seawall'&&statusRemaining(actor,'fortified')===0&&battle.tier!=='normal')score+=55;
   if(ability.id==='rally'&&allies.filter(a=>statusRemaining(a,'strength')===0).length>=2)score+=45;
   return score;
 }
@@ -120,6 +120,35 @@ function chooseMechanicAware(battle){
       if(foe)return {kind:'skill',actorId:actor.id,abilityId:'dismissed',targetIds:[foe.id]};
     }
   }
+  const kenUnit=living(battle,'ally').find(unit=>unit.sourceId==='ken');
+  const marked=battle.effects.filter(fx=>fx.id==='ink-mark');
+  if(actor.sourceId==='ken'){
+    const laterAlly=battle.turnOrder.slice(battle.turnIndex+1).some(id=>battle.units[id]?.alive&&battle.units[id].side==='ally'&&id!==actor.id);
+    if(!marked.length&&laterAlly&&(actor.abilityPP['fresh-ink']??0)>0){
+      const foe=living(battle,'enemy').sort((a,b)=>hpRatio(b)-hpRatio(a))[0];
+      if(foe)return {kind:'skill',actorId:actor.id,abilityId:'fresh-ink',targetIds:[foe.id]};
+    }
+    const worst=worstIncomingPower(battle);
+    const needy=living(battle,'ally').find(unit=>!battle.effects.some(fx=>fx.id==='script'&&fx.targetUnitId===unit.id)&&worst>=Math.ceil(.2*unit.maxHp)*2);
+    if(needy&&(actor.abilityPP['protective-script']??0)>0&&battle.tier!=='normal')return {kind:'skill',actorId:actor.id,abilityId:'protective-script',targetIds:[needy.id]};
+    // A mark still standing on Ken's turn is one no ally took, and Blackwork cashes it at a far
+    // better rate than a 20-power Needlework tick, so it outranks Needlework whenever PP allows.
+    if((actor.abilityPP['blackwork']??0)>0){
+      const foe=battle.units[marked[0]?.targetUnitId]??living(battle,'enemy').sort((a,b)=>hpRatio(a)-hpRatio(b))[0];
+      if(foe?.alive)return {kind:'skill',actorId:actor.id,abilityId:'blackwork',targetIds:[foe.id]};
+    }
+    if(marked.length&&(actor.abilityPP['needlework']??0)>0)return {kind:'skill',actorId:actor.id,abilityId:'needlework',targetIds:[marked[0].targetUnitId]};
+  }
+  if(kenUnit&&marked.length&&actor.id!==kenUnit.id){
+    const markedFoe=battle.units[marked[0].targetUnitId];
+    if(markedFoe?.alive){
+      const best=getCharacter(actor.sourceId).abilities.map(id=>({id,ability:getAbility(id)}))
+        .filter(entry=>entry.ability.effects.some(e=>e.kind==='damage')&&entry.ability.target==='enemy-one')
+        .filter(entry=>validatePlayerCommand(battle,{kind:'skill',actorId:actor.id,abilityId:entry.id,targetIds:[markedFoe.id]}).legal)
+        .sort((a,b)=>scoreAbility(battle,actor,b.ability,markedFoe.id)-scoreAbility(battle,actor,a.ability,markedFoe.id))[0];
+      if(best)return {kind:'skill',actorId:actor.id,abilityId:best.id,targetIds:[markedFoe.id]};
+    }
+  }
   return chooseImmediateValue(battle);
 }
 
@@ -135,7 +164,8 @@ const COMMAND_CAP=180;
 function regionFor(encounter){if(encounter.id==='boss-jonlow')return 0;if(encounter.id==='boss-klyde')return 1;if(encounter.id==='boss-warden')return 2;return encounter.tier==='elite'?1:0;}
 function simulate(party,encounter,seed){
   const rng=new SeededRng(seed);let battle=createBattle(party,encounter.id,rng,{coins:30,regionIndex:regionFor(encounter)});let actions=0;
-  const tally={protectCasts:0,protectTriggers:0,protectExpired:0,recipientAvoided:0,transferPaid:0,monitorPrevented:0,readyGranted:0,readySpent:0};
+  const tally={protectCasts:0,protectTriggers:0,protectExpired:0,recipientAvoided:0,transferPaid:0,monitorPrevented:0,readyGranted:0,readySpent:0,inkApplied:0,inkConsumed:0,inkExpired:0,inkCleared:0,markConsumed:0,markPercent:0,markDelays:[],scriptApplied:0,scriptTriggered:0,scriptExpired:0,scriptPrevented:0};
+  const markRounds=new Map();
   while((battle.phase==='input'||battle.phase==='resolving')&&actions<COMMAND_CAP&&battle.round<=ROUND_CAP){
     if(battle.phase!=='input')throw new Error('Engine returned unresolved automatic state');
     const command=chooseCommand(battle);
@@ -147,6 +177,16 @@ function simulate(party,encounter,seed){
       if(event.type==='transfer')tally.transferPaid+=event.amount;
       if(event.type==='prevented'&&event.kind==='class-monitor')tally.monitorPrevented+=event.amount;
       if(event.type==='ready')event.active?tally.readyGranted++:tally.readySpent++;
+      if(event.type==='effectApplied'&&event.effectId==='ink-mark'){tally.inkApplied++;markRounds.set(event.targetId,battle.round);}
+      if(event.type==='effectRemoved'&&event.effectId==='ink-mark'){
+        const key=`ink${event.reason[0].toUpperCase()}${event.reason.slice(1)}`;if(key in tally)tally[key]++;
+        if(event.reason==='consumed'&&markRounds.has(event.targetId))tally.markDelays.push(battle.round-markRounds.get(event.targetId));
+      }
+      if(event.type==='effectApplied'&&event.effectId==='script')tally.scriptApplied++;
+      if(event.type==='effectRemoved'&&event.effectId==='script'&&event.reason==='consumed')tally.scriptTriggered++;
+      if(event.type==='effectRemoved'&&event.effectId==='script'&&event.reason==='expired')tally.scriptExpired++;
+      if(event.type==='prevented'&&event.kind==='script')tally.scriptPrevented+=event.amount;
+      if(event.type==='message'&&event.text.startsWith('Ink Mark adds')){tally.markConsumed++;tally.markPercent+=Number(event.text.match(/adds (\d+)% damage/)?.[1]??0);}
     }
     battle=resolution.nextState;actions++;
   }
@@ -157,11 +197,13 @@ function simulate(party,encounter,seed){
 
 if(process.env.SPEC03_TRACE){
   const rng=new SeededRng(Number(process.env.SPEC03_TRACE));
-  let battle=createBattle(['saq','hans','marcus'],'normal-fastlane',rng,{coins:30,regionIndex:0});
+  let battle=createBattle(['ken','hans','marcus'],'normal-fastlane',rng,{coins:30,regionIndex:0});
   while(battle.phase==='input'&&battle.round<=ROUND_CAP){
     const command=chooseCommand(battle);
     console.log(`R${battle.round} ${battle.units[command.actorId].displayName}: ${command.abilityId??command.kind}`);
-    battle=resolveBattleCommand(battle,command,rng).nextState;
+    const resolution=resolveBattleCommand(battle,command,rng);
+    for(const event of resolution.events)if(event.type==='message'&&event.text.startsWith('Ink Mark adds'))console.log(event.text);
+    battle=resolution.nextState;
   }
   console.log(`outcome=${battle.phase} effects=${JSON.stringify(battle.effects)}`);
   process.exit(0);
@@ -238,6 +280,26 @@ for(const t of tierGroups){
   md+=`| ${t} | ${fmtPct(saqWin)} | ${fmtPct(marcWin)} | ${delta.toFixed(1)}pp${flag} | ${saqMed} | ${marMed} |\n`;
 }
 md+='\n';
+
+const kenRows=records.filter(r=>r.party.includes('ken'));
+const sumKen=key=>kenRows.reduce((total,row)=>total+row[key],0);
+const markDelays=kenRows.flatMap(row=>row.markDelays);
+md+=`## Ink diagnostics (Ken-inclusive parties, ${kenRows.length} battles)\n\n| Metric | Value |\n|---|---:|\n`;
+for(const [label,key] of [['Marks applied','inkApplied'],['Marks consumed','inkConsumed'],['Marks expired','inkExpired'],['Marks cleared','inkCleared'],['Mark payoff messages','markConsumed'],['Added mark damage %','markPercent']])md+=`| ${label} | ${sumKen(key)} |\n`;
+md+=`| Median setup-to-payoff delay | ${markDelays.length?[...markDelays].sort((a,b)=>a-b)[Math.floor(markDelays.length/2)]:0} rounds |\n\n`;
+md+=`## Script diagnostics\n\n| Metric | Value |\n|---|---:|\n| Script applied | ${sumKen('scriptApplied')} |\n| Script triggered | ${sumKen('scriptTriggered')} |\n| Script expired | ${sumKen('scriptExpired')} |\n| Damage prevented | ${sumKen('scriptPrevented')} |\n\n`;
+
+const kenVsNathaniel=matchedSlot('ken','nathaniel');
+md+=`## Matched-slot replacement: Ken vs Nathaniel (${kenVsNathaniel.length} matched pairs)\n\n| Tier | Ken win rate | Nathaniel win rate | Delta |\n|---|---:|---:|---:|\n`;
+for(const tier of tierGroups){const rows=kenVsNathaniel.filter(row=>row.tier===tier);const subject=rows.filter(row=>row.subject.won).length/rows.length;const alternative=rows.filter(row=>row.alternative.won).length/rows.length;md+=`| ${tier} | ${fmtPct(subject)} | ${fmtPct(alternative)} | ${((subject-alternative)*100).toFixed(1)}pp |\n`;}
+
+const LAYERED_PARTIES=[['saq','ken','jiro'],['saq','ken','nathaniel'],['saq','marcus','jiro'],['saq','marcus','hans'],['saq','earl','jiro'],['saq','nathaniel','earl']];
+const BURST_PARTIES=[['ken','nathaniel','leandre'],['ken','greg','yatords'],['ken','michael','daboy']];
+for(const [title,groups] of [['Layered defense',LAYERED_PARTIES],['Burst checks',BURST_PARTIES]]){
+  md+=`## ${title}\n\n| Party | Win rate | Timeouts | Ending HP |\n|---|---:|---:|---:|\n`;
+  for(const party of groups){const stats=summarize(records.filter(row=>party.every(id=>row.party.includes(id))));md+=`| ${party.join(' / ')} | ${fmtPct(stats.winRate)} | ${stats.timeouts} | ${fmtPct(stats.hpRatio)} |\n`;}
+  md+='\n';
+}
 
 mkdirSync('docs',{recursive:true});writeFileSync('docs/BALANCE_AUDIT_V03.md',md);
 console.log(md);

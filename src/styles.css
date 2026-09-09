@@ -125,6 +125,9 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 .status-weaken,.status-slow,.status-blind,.status-exposed { background: #ddb0a8; }
 .status-empty { font-size: .62rem; color: rgba(30,26,23,.55); font-style: italic; }
 .effect-protect { background: #bcd0c4; }
+.effect-ink-mark { background: #c4bdd8; }
+.effect-script { background: #d4c87a; }
+.effect-taunt { background: #c9b79c; }
 .effect-positive { border-style: dashed; }
 .effect-negative { background: #e3c6a0; }
 
@@ -303,6 +306,7 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 .target-advantage { color:#305c32; }
 .target-resisted { color:#7b2d27; }
 .number-pop { position:absolute; z-index:10; left:50%; top:20%; transform:translateX(-50%); font:900 1.1rem Impact,sans-serif; color:#fff; text-shadow:2px 2px 0 #000,-1px -1px 0 #000; animation:number-pop var(--dur-pop) ease-out both; pointer-events:none; white-space:nowrap; }
+.number-pop.shield-pop { color:#8ce0c8; }
 .number-pop.critical { color:#ffd45f; font-size:1.32rem; }
 .heal-pop { color:#bbefb5; }
 .unit-cutout-wrap.is-acting { animation:attack-lunge var(--dur-attack) cubic-bezier(.2,.75,.35,1); }

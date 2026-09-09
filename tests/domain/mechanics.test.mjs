@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { SeededRng } from '../../.domain-build/core/rng/seededRng.js';
 import { createBattle, resolveBattleCommand } from '../../.domain-build/core/combat/battleEngine.js';
 import { validatePlayerCommand } from '../../.domain-build/core/combat/actions.js';
-import { legalEnemyMoves } from '../../.domain-build/core/combat/enemyAi.js';
+import { chooseEnemyTargets, legalEnemyMoves } from '../../.domain-build/core/combat/enemyAi.js';
 import { createRun } from '../../.domain-build/core/progression/run.js';
 import { previewItemPp } from '../../.domain-build/core/progression/itemRecovery.js';
 
@@ -104,12 +104,23 @@ test('Leandre Clearance Sale explains insufficient funds and spends coins when l
   }
 });
 
-test('Earl First Responder makes his first heal 20% stronger',()=>{
+test('Earl First Responder makes his first heal 30% stronger',()=>{
   let battle=createBattle(['earl','hans','marcus'],'normal-scrap',new SeededRng(15));
   const earl=actorBySource(battle,'earl');const hans=actorBySource(battle,'hans');hans.hp=10;forceTurn(battle,earl.id);
   const result=resolveBattleCommand(battle,{kind:'skill',actorId:earl.id,abilityId:'patch-up',targetIds:[hans.id]},new SeededRng(44));
   const healed=result.nextState.units[hans.id].hp-10;
-  assert.equal(healed,Math.round(hans.maxHp*0.30*1.20));
+  assert.equal(healed,Math.round(hans.maxHp*0.40*1.30));
+});
+
+test("Chef's Table fortifies the party, extended by Mise en Place",()=>{
+  let battle=createBattle(['jiro','hans','marcus'],'normal-scrap',new SeededRng(15));
+  const jiro=actorBySource(battle,'jiro');forceTurn(battle,jiro.id);
+  const result=resolveBattleCommand(battle,{kind:'skill',actorId:jiro.id,abilityId:'chefs-table',targetIds:[]},new SeededRng(44));
+  for(const id of result.nextState.allies){
+    const fortified=result.nextState.units[id].statuses.find(s=>s.id==='fortified');
+    assert.ok(fortified,'ally missing Fortified');
+    assert.equal(fortified.remaining,2);
+  }
 });
 
 test('boss enemy AI never allows immediate repeated signature move',()=>{
@@ -237,4 +248,53 @@ test('move accuracy is shared across Yosi damage and Blind instead of rolling tw
   const blind=result.nextState.units[targetId].statuses.some(s=>s.id==='blind');
   assert.equal(dealt,blind,'Yosi damage and Blind must share the same move accuracy result');
   assert.equal(result.events.some(e=>e.type==='miss'&&e.actorId===earl.id&&e.targetId===targetId),!dealt);
+});
+
+test('Second Wind heals the first ally each battle to fall under 30% Max HP',()=>{
+  let fired=false;
+  for(let seed=1;seed<=25&&!fired;seed+=1){
+    const battle=createBattle(['earl','hans','marcus'],'normal-scrap',new SeededRng(seed),{relicIds:['second-wind']});
+    const earl=actorBySource(battle,'earl');const hans=actorBySource(battle,'hans');
+    hans.hp=Math.round(hans.maxHp*0.29);
+    forceTurn(battle,earl.id,true);
+    const result=resolveBattleCommand(battle,{kind:'guard',actorId:earl.id},new SeededRng(seed));
+    if(result.nextState.flags.secondWindUsed){
+      fired=true;
+      const heal=result.events.find(event=>event.type==='heal'&&event.targetId===hans.id);
+      assert.ok(heal,'Second Wind set its flag without healing');
+      assert.equal(heal.amount,Math.round(hans.maxHp*0.15));
+    }
+  }
+  assert.ok(fired,'Second Wind never fired across 25 seeds');
+});
+
+test('Old Bandana opens every battle with the party Fortified',()=>{
+  const battle=createBattle(['earl','hans','yeeho'],'normal-scrap',new SeededRng(15),{relicIds:['old-bandana']});
+  for(const id of battle.allies) assert.ok(battle.units[id].statuses.some(s=>s.id==='fortified'),'ally not Fortified');
+  const bare=createBattle(['earl','hans','yeeho'],'normal-scrap',new SeededRng(15));
+  for(const id of bare.allies) assert.ok(!bare.units[id].statuses.some(s=>s.id==='fortified'));
+});
+
+test('Duct Tape extends positive statuses allies apply, not negative ones',()=>{
+  const battle=createBattle(['marcus','hans','earl'],'normal-scrap',new SeededRng(15),{relicIds:['duct-tape']});
+  const marcus=actorBySource(battle,'marcus');const hans=actorBySource(battle,'hans');forceTurn(battle,marcus.id);
+  const result=resolveBattleCommand(battle,{kind:'skill',actorId:marcus.id,abilityId:'brace',targetIds:[hans.id]},new SeededRng(44));
+  assert.equal(result.nextState.units[hans.id].statuses.find(s=>s.id==='fortified').remaining,3);
+});
+
+test('Marcus Seawall pulls every single-target enemy attack off the weakest ally',()=>{
+  const battle=createBattle(['marcus','nathaniel','earl'],'normal-scrap',new SeededRng(15));
+  const marcus=actorBySource(battle,'marcus');
+  const nathaniel=actorBySource(battle,'nathaniel');
+  nathaniel.hp=1;
+  const enemy=battle.units[battle.enemies[0]];
+  const move={id:'probe',name:'Probe',affinity:'might',target:'enemy-one',effects:[],weight:1};
+  const pick=(state,seed)=>chooseEnemyTargets(state,state.units[enemy.id],move,new SeededRng(seed))[0];
+  const seeds=[1,2,3,4,5,6,7,8,9,10];
+  assert.ok(seeds.some(seed=>pick(battle,seed)===nathaniel.id),'the weakest ally was never the default target');
+
+  forceTurn(battle,marcus.id);
+  const after=resolveBattleCommand(battle,{kind:'skill',actorId:marcus.id,abilityId:'seawall',targetIds:[]},new SeededRng(44)).nextState;
+  for(const seed of seeds) assert.equal(pick(after,seed),marcus.id,`seed ${seed} ignored the Taunt`);
+  assert.ok(after.units[marcus.id].statuses.some(status=>status.id==='fortified'&&status.remaining>=2),'Seawall did not Fortify Marcus');
 });
