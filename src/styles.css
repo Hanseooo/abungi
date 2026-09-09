@@ -618,6 +618,10 @@ dialog.global-overlay:not([open]) { display: none; }
 .shop-counter i:nth-child(2) { height: 57px; transform: rotate(1.5deg); }
 .shop-lamp { position: absolute; width: 46px; height: 46px; border-radius: 50%; right: 9%; top: 48px; background: #d8bb69; border: 3px solid var(--ink); box-shadow: 0 0 22px rgba(216,187,105,.4); }
 .shop-counter-scene > span { position: absolute; left: 12px; bottom: 11px; z-index: 2; background: var(--paper); border: 1px solid var(--ink); color: var(--ink); padding: 3px 7px; font-size: .62rem; font-weight: 950; transform: rotate(-1deg); }
+.shop-lara { position: absolute; left: 11%; bottom: -3px; width: 82px; }
+.shop-lara .cutout-art, .shop-lara .cutout-fallback { display: block; width: 82px; height: 82px; }
+.shop-keeper-line { max-width: 1200px; margin: 0 auto 14px; border-left: 3px solid var(--ink); padding: 5px 10px; font-size: .8rem; font-weight: 700; background: rgba(242,231,213,.55); }
+.shop-keeper-line strong { font-size: .62rem; letter-spacing: .08em; margin-right: 7px; }
 .offer-topline { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .offer-kind, .rarity-stamp, .deal-stamp { border: 1px solid var(--ink); padding: 2px 5px; font-size: .62rem; font-weight: 950; letter-spacing: .05em; background: var(--paper-2); }
 .rarity-uncommon .rarity-stamp { background: #b7c8a1; }
