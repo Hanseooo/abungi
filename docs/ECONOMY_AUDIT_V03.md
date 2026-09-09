@@ -46,8 +46,8 @@ Each group below samples 3,000 shops across all three regions. Duplicate content
 
 | Party | Avg offers | Common | Uncommon | Rare item | Relic | Avg price | Duplicate shelves |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Without Leandre | 4.0 | 51.1% | 47.3% | 1.6% | 0.0% | 22.0 | 0 |
-| With Leandre | 5.0 | 48.3% | 49.7% | 2.0% | 0.0% | 21.8 | 0 |
+| Without Leandre | 4.0 | 47.6% | 45.5% | 1.4% | 5.5% | 22.0 | 0 |
+| With Leandre | 5.0 | 45.5% | 48.3% | 1.8% | 4.4% | 21.8 | 0 |
 
 Leandre's fifth shelf is therefore real run-level utility rather than a combat-stat bonus. Rare Revive Kits remain possible but uncommon enough that a player cannot route around attrition assuming one will appear.
 
