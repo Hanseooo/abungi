@@ -485,6 +485,10 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
   padding: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
 }
 .global-overlay { background: rgba(30, 26, 23, .72); backdrop-filter: blur(2px); }
+/* The overlay is a native <dialog>, so it needs the UA's box defaults cleared and its own
+   closed state restored, since the rule above overrides display:none. */
+dialog.global-overlay { margin: 0; max-width: none; max-height: none; border: 0; color: inherit; }
+dialog.global-overlay:not([open]) { display: none; }
 .global-overlay-panel,
 .settings-panel,
 .guide-panel,
