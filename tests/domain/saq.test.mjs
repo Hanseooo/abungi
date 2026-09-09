@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { applyIncomingEffects } from '../../.domain-build/core/combat/interception.js';
-import { addEffect } from '../../.domain-build/core/combat/battleEffects.js';
+import { addEffect, EFFECT_LIFETIMES, tickSourceTurnStart } from '../../.domain-build/core/combat/battleEffects.js';
 
 function scenario({ saqHp = 116, round = 1, classMonitorRound = 0 } = {}) {
   const saq = { id: 'ally-0-saq', sourceId: 'saq', side: 'ally', hp: saqHp, maxHp: 116, alive: saqHp > 0, flags: classMonitorRound ? { classMonitorRound } : {} };
@@ -12,14 +12,14 @@ function scenario({ saqHp = 116, round = 1, classMonitorRound = 0 } = {}) {
   return { state, saq, hans, foe };
 }
 
-test('a 40-damage hit splits 20 to the recipient and 5 to Saq after Class Monitor', () => {
+test('a 40-damage hit splits 20 to the recipient and 2 to Saq after Class Monitor', () => {
   const { state, saq, hans, foe } = scenario();
   const events = [];
   const recipientDamage = applyIncomingEffects(state, foe, hans, 40, events);
   assert.equal(recipientDamage, 20, 'recipient keeps B - floor(B/2)');
-  assert.equal(saq.hp, 111, 'transfer is ceil(20/2) = 10, minus 5 prevented = 5');
-  assert.deepEqual(events.filter(e => e.type === 'prevented'), [{ type: 'prevented', kind: 'class-monitor', targetId: saq.id, amount: 5 }]);
-  assert.deepEqual(events.filter(e => e.type === 'transfer'), [{ type: 'transfer', fromId: hans.id, toId: saq.id, amount: 5 }]);
+  assert.equal(saq.hp, 114, 'transfer is ceil(20/2) = 10, minus 8 prevented = 2');
+  assert.deepEqual(events.filter(e => e.type === 'prevented'), [{ type: 'prevented', kind: 'class-monitor', targetId: saq.id, amount: 8 }]);
+  assert.deepEqual(events.filter(e => e.type === 'transfer'), [{ type: 'transfer', fromId: hans.id, toId: saq.id, amount: 2 }]);
   assert.equal(state.effects.length, 0, 'the link is consumed by the first redirectable hit');
   assert.equal(saq.flags.readyTurns, 1);
   assert.equal(saq.flags.classMonitorRound, state.round);
@@ -127,8 +127,34 @@ test('refreshing an identical Protect with no added lifetime is rejected', () =>
   const saqId = battle.allies.find(id => battle.units[id].sourceId === 'saq');
   const hansId = battle.allies.find(id => battle.units[id].sourceId === 'hans');
   battle.turnIndex = battle.turnOrder.indexOf(saqId);
-  addEffect(battle, { id: 'protect', sourceUnitId: saqId, targetUnitId: hansId, expiry: 'source-turn-start', remaining: 1 });
+  addEffect(battle, { id: 'protect', sourceUnitId: saqId, targetUnitId: hansId, ...EFFECT_LIFETIMES.protect });
   const verdict = validatePlayerCommand(battle, { kind: 'skill', actorId: saqId, abilityId: 'take-your-seat', targetIds: [hansId] });
   assert.equal(verdict.legal, false);
   assert.match(verdict.reason, /already protected/i);
+});
+
+test('Protect stands through a full enemy round instead of expiring before it is tested',()=>{
+  // Saq is mid-speed, so a one-turn link often lapsed before any single-target attack arrived.
+  assert.equal(EFFECT_LIFETIMES.protect.remaining,2,'the link survives one source-turn tick');
+  const state={round:1,effects:[],flags:{},units:{},allies:[],enemies:[]};
+  addEffect(state,{id:'protect',sourceUnitId:'ally-0-saq',targetUnitId:'ally-1-hans',...EFFECT_LIFETIMES.protect});
+  const events=[];
+  tickSourceTurnStart(state,'ally-0-saq',events);
+  assert.equal(state.effects.length,1,'still standing after Saq begins his next turn');
+  tickSourceTurnStart(state,'ally-0-saq',events);
+  assert.equal(state.effects.length,0,'gone by the turn after that');
+});
+
+test('a Protect with lifetime left to gain can be refreshed, an equal one cannot',()=>{
+  const battle=createBattle(['saq','hans','earl'],'normal-scrap',new SeededRng(5));
+  const saqId=battle.allies.find(id=>battle.units[id].sourceId==='saq');
+  const hansId=battle.allies.find(id=>battle.units[id].sourceId==='hans');
+  battle.turnOrder=[saqId,...battle.turnOrder.filter(id=>id!==saqId)];battle.turnIndex=0;battle.phase='input';
+  const cmd={kind:'skill',actorId:saqId,abilityId:'take-your-seat',targetIds:[hansId]};
+
+  battle.effects=[{uid:'fx-a',id:'protect',sourceUnitId:saqId,targetUnitId:hansId,expiry:'source-turn-start',remaining:EFFECT_LIFETIMES.protect.remaining}];
+  assert.equal(validatePlayerCommand(battle,cmd).legal,false,'a full-length link is not worth recasting');
+
+  battle.effects=[{uid:'fx-b',id:'protect',sourceUnitId:saqId,targetUnitId:hansId,expiry:'source-turn-start',remaining:1}];
+  assert.equal(validatePlayerCommand(battle,cmd).legal,true,'a link down to its last turn can be renewed');
 });

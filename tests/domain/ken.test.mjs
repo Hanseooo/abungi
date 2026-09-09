@@ -40,9 +40,12 @@ test('Script resolves before Protect and neither pass is applied twice', () => {
   const { state, saq, hans, foe } = scenario({ withProtect: true });
   const events = [];
   const damage = applyIncomingEffects(state, foe, hans, 40, events);
-  // Script prevents 30% of 40 = 12, leaving B=28; recipient keeps 14; R=14; transfer ceil(14/2)=7 minus 5 = 2.
+  // Script prevents 30% of 40 = 12, leaving B=28; recipient keeps 14; R=14; transfer ceil(14/2)=7,
+  // which Class Monitor now absorbs whole, so Saq covers the rest for free.
   assert.equal(damage, 14);
-  assert.equal(saq.hp, 114);
+  assert.equal(saq.hp, 116);
+  assert.equal(events.filter(e => e.type === 'transfer').length, 0, 'nothing left to transfer');
+  assert.equal(saq.flags.readyTurns, 1, 'Saq still earns Ready for taking the call');
   assert.equal(events.filter(e => e.type === 'prevented').map(e => e.kind).join(','), 'script,class-monitor');
 });
 

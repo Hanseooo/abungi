@@ -6,6 +6,7 @@ import { validatePlayerCommand } from '../../.domain-build/core/combat/actions.j
 import { chooseEnemyTargets, legalEnemyMoves } from '../../.domain-build/core/combat/enemyAi.js';
 import { createRun } from '../../.domain-build/core/progression/run.js';
 import { previewItemPp } from '../../.domain-build/core/progression/itemRecovery.js';
+import { BALANCE } from '../../.domain-build/balance/constants.js';
 
 function actorBySource(state, sourceId) {
   const unit=Object.values(state.units).find(u=>u.sourceId===sourceId);
@@ -297,4 +298,66 @@ test('Marcus Seawall pulls every single-target enemy attack off the weakest ally
   const after=resolveBattleCommand(battle,{kind:'skill',actorId:marcus.id,abilityId:'seawall',targetIds:[]},new SeededRng(44)).nextState;
   for(const seed of seeds) assert.equal(pick(after,seed),marcus.id,`seed ${seed} ignored the Taunt`);
   assert.ok(after.units[marcus.id].statuses.some(status=>status.id==='fortified'&&status.remaining>=2),'Seawall did not Fortify Marcus');
+});
+
+test('Breakaway counts each Momentum stack once, as power, not power and a percentage',()=>{
+  // Momentum used to add +25 power per stack AND the passive's +8% per stack to the same hit.
+  // The stacks now convert to power only, so the payoff curve is stated entirely by the tooltip.
+  const damageAtStacks=start=>{
+    let battle=createBattle(['yatords','earl','marcus'],'normal-scrap',new SeededRng(12));
+    const yatords=actorBySource(battle,'yatords');
+    forceTurn(battle,yatords.id,true);
+    battle.units[yatords.id].flags.momentum=start;
+    const foe=battle.enemies.find(id=>battle.units[id].alive);
+    const result=resolveBattleCommand(battle,{kind:'skill',actorId:yatords.id,abilityId:'breakaway',targetIds:[foe]},new SeededRng(91));
+    const stacks=Number(battle.units[yatords.id].flags.momentum??0);
+    assert.equal(stacks,start,'the stack count under test is the one the turn started with');
+    const hit=result.events.find(e=>e.type==='damage'&&e.targetId===foe);
+    assert.ok(hit,'Breakaway landed');
+    return hit.amount;
+  };
+  // gainYatordsMomentum adds one stack before the ability resolves, so these are 1 and 3 stacks.
+  const oneStack=damageAtStacks(0), threeStacks=damageAtStacks(2);
+  const expected=(80+3*37)/(80+1*37);           // 191 / 117 = 1.633
+  const doubleCounted=((80+3*25)/(80+1*25))*(1.24/1.08); // the old 1.695
+  const ratio=threeStacks/oneStack;
+  assert.ok(Math.abs(ratio-expected)<0.03,`ratio ${ratio.toFixed(3)} should track ${expected.toFixed(3)}`);
+  assert.ok(Math.abs(ratio-doubleCounted)>0.03,`ratio ${ratio.toFixed(3)} must not track the old ${doubleCounted.toFixed(3)}`);
+});
+
+test('Regulars Only extends every status Daboy applies, not just the one positive one in his kit',()=>{
+  let battle=createBattle(['daboy','jiro','marcus'],'normal-scrap',new SeededRng(77));
+  const daboy=actorBySource(battle,'daboy'); const jiro=actorBySource(battle,'jiro');
+  const foe=Object.values(battle.units).find(u=>u.side==='enemy');
+
+  forceTurn(battle,daboy.id);
+  const rocks=resolveBattleCommand(battle,{kind:'skill',actorId:daboy.id,abilityId:'on-the-rocks',targetIds:[foe.id]},new SeededRng(78));
+  const slow=rocks.nextState.units[foe.id].statuses.find(s=>s.id==='slow');
+  assert.equal(slow.remaining,3,'On the Rocks lists Slow for 2 turns; the passive makes it 3');
+
+  // The positive half of the passive still works, and Jiro's version stays ally-and-positive only.
+  let after=forceTurn(rocks.nextState,daboy.id);
+  const pour=resolveBattleCommand(after,{kind:'skill',actorId:daboy.id,abilityId:'house-pour',targetIds:[jiro.id]},new SeededRng(79));
+  assert.equal(pour.nextState.units[jiro.id].statuses.find(s=>s.id==='strength').remaining,3);
+});
+
+test('House Special pays Daboy for the debuffs his own kit applies',()=>{
+  let battle=createBattle(['daboy','jiro','marcus'],'normal-scrap',new SeededRng(91));
+  const daboy=actorBySource(battle,'daboy');
+  const foeId=Object.values(battle.units).find(u=>u.side==='enemy').id;
+
+  forceTurn(battle,daboy.id);
+  const clean=resolveBattleCommand(battle,{kind:'skill',actorId:daboy.id,abilityId:'bottle-tap',targetIds:[foeId]},new SeededRng(92));
+  const plain=clean.events.find(e=>e.type==='damage'&&e.targetId===foeId).amount;
+
+  // Same seed, same hit, only Slow from his own On the Rocks separating the two.
+  let slowed=forceTurn(battle,daboy.id);
+  slowed=resolveBattleCommand(slowed,{kind:'skill',actorId:daboy.id,abilityId:'on-the-rocks',targetIds:[foeId]},new SeededRng(93)).nextState;
+  slowed.units[foeId].hp=slowed.units[foeId].maxHp;
+  forceTurn(slowed,daboy.id);
+  const paid=resolveBattleCommand(slowed,{kind:'skill',actorId:daboy.id,abilityId:'bottle-tap',targetIds:[foeId]},new SeededRng(92));
+  const bonus=paid.events.find(e=>e.type==='damage'&&e.targetId===foeId).amount;
+
+  assert.ok(bonus>plain,`Bottle Tap into Slow should beat a clean one: ${bonus} vs ${plain}`);
+  assert.equal(bonus,Math.round(plain*BALANCE.daboy.houseSpecialDamageMultiplier));
 });

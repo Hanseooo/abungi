@@ -94,7 +94,10 @@ export function validatePlayerCommand(state:BattleState, command:BattleCommand):
     const targetId=command.targetIds[0];
     if(targetId===actor.id) return {legal:false,reason:'Protect must cover another ally, not its caster.'};
     const existing=targetId?findEffect(state,'protect',targetId):undefined;
-    if(existing&&existing.sourceUnitId===actor.id) return {legal:false,reason:'That ally is already protected until your next turn.'};
+    // Now that a link lasts two source turns, a worn-down one is worth renewing; only a
+    // full-length link is a wasted cast.
+    if(existing&&existing.sourceUnitId===actor.id&&existing.remaining>=EFFECT_LIFETIMES.protect.remaining)
+      return {legal:false,reason:'That ally is already protected for as long as a new link would last.'};
   }
   const scriptEffect=ability.effects.find((effect): effect is Extract<EffectDefinition,{kind:'applyEffect'}>=>effect.kind==='applyEffect'&&effect.effectId==='script');
   if(scriptEffect){

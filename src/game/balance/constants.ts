@@ -29,10 +29,16 @@ export const BALANCE = {
   maxDeployables: 2,
   leandreClearanceCoinCost: 15,
   yMomentumDamagePerStack: 0.08,
+  // Breakaway converts stacks to power instead, so the passive percentage is not applied twice.
+  yBreakawayPowerPerStack: 37,
   maxMomentum: 3,
   // Spec 03 Part B trial values. Unvalidated tuning hypotheses; Part C measures them.
+  // Daboy's own Slow and Weaken are the setup; this is what they are worth to him.
+  daboy: {
+    houseSpecialDamageMultiplier: 1.35,
+  },
   saq: {
-    classMonitorPrevention: 5,
+    classMonitorPrevention: 8,
     correctiveActionDamageMultiplier: 1.25,
     dismissedReadyDamageMultiplier: 1.60,
   },

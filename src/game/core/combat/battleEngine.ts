@@ -137,7 +137,10 @@ function targetIdsFor(state:BattleState,actor:BattleUnit,mode:TargetMode,request
   if(mode==='ally-one' || mode==='enemy-one') return requested.length ? [requested[0]] : [];
   if(mode==='random-enemy') {
     const foes=livingTargets(state,foeSide);
-    return foes.length ? [rng.pick(foes).id] : [];
+    if(!foes.length) return [];
+    // A standing Taunt takes every attack that resolves to a single target, re-rolled or not.
+    const taunted=foes.find(unit=>state.effects.some(effect=>effect.id==='taunt'&&effect.targetUnitId===unit.id));
+    return [taunted?.id ?? rng.pick(foes).id];
   }
   return [];
 }
@@ -219,9 +222,18 @@ function healOne(state:BattleState,actor:BattleUnit,target:BattleUnit,percent:nu
   if(amount>0) events.push({type:'heal',targetId:target.id,amount}); return amount;
 }
 
+// Saq and Daboy both pay off the same list of softening statuses; stated once so the two stay in step.
+function carriesSoftening(state:BattleState,target:BattleUnit):boolean {
+  return target.statuses.some(status=>['weaken','slow','blind','exposed'].includes(status.id))
+    || state.effects.some(fx=>fx.id==='ink-mark'&&fx.targetUnitId===target.id);
+}
+
 function statusDuration(actor:BattleUnit,target:BattleUnit,ability:AbilityDefinition|undefined,effect:Extract<EffectDefinition,{kind:'status'}>):number {
   let duration=ability?upgradedDuration(actor,ability,effect.duration):effect.duration;
-  if(target.side===actor.side && POSITIVE_STATUSES.includes(effect.statusId) && (actor.sourceId==='jiro'||actor.sourceId==='daboy')) duration+=1;
+  if(actor.sourceId==='jiro' && target.side===actor.side && POSITIVE_STATUSES.includes(effect.statusId)) duration+=1;
+  // Daboy's kit applies exactly one positive status, so a Jiro-shaped passive sat idle on
+  // three of his four abilities. Every status he applies lasts the extra turn instead.
+  if(actor.sourceId==='daboy') duration+=1;
   return duration;
 }
 
@@ -273,7 +285,8 @@ function prepareAbilityContext(state:BattleState,actor:BattleUnit,ability:Abilit
     actor.flags.readyTurns=0;
     events.push({type:'ready',actorId:actor.id,active:false},{type:'message',text:'Ready spent on Dismissed.'});
   }
-  if(actor.sourceId==='yatords') ctx.outgoing*=1+Number(actor.flags.momentum??0)*BALANCE.yMomentumDamagePerStack;
+  // Breakaway spends the stacks as power below, so it must not also take the passive percentage.
+  if(actor.sourceId==='yatords'&&ability.id!=='breakaway') ctx.outgoing*=1+Number(actor.flags.momentum??0)*BALANCE.yMomentumDamagePerStack;
   return ctx;
 }
 
@@ -347,8 +360,9 @@ function resolveEffects(
           let outgoing=context.outgoing;
           if(effect.mechanicId==='boarding-rush' && target.hp/target.maxHp<0.5) outgoing*=1.25;
           if(effect.mechanicId==='pedal-strike' && effectiveSpeed(actor)>effectiveSpeed(target)) outgoing*=1.15;
-          if(effect.mechanicId==='breakaway') power+=25*Number(actor.flags.momentum??0);
-          if(effect.mechanicId==='corrective-action'&&(target.statuses.some(status=>['weaken','slow','blind','exposed'].includes(status.id))||state.effects.some(fx=>fx.id==='ink-mark'&&fx.targetUnitId===target.id)))outgoing*=BALANCE.saq.correctiveActionDamageMultiplier;
+          if(effect.mechanicId==='breakaway') power+=BALANCE.yBreakawayPowerPerStack*Number(actor.flags.momentum??0);
+          if(effect.mechanicId==='corrective-action'&&carriesSoftening(state,target))outgoing*=BALANCE.saq.correctiveActionDamageMultiplier;
+          if(effect.mechanicId==='house-special'&&carriesSoftening(state,target))outgoing*=BALANCE.daboy.houseSpecialDamageMultiplier;
           const drain=effect.mechanicId==='life-drain'?(upgraded(actor,ability!)?0.45:0.35):effect.mechanicId==='enemy-life-drain'?0.35:0;
           const shared=passesSharedMoveAccuracy(actor,target,ability,context,rng,events);if(shared===false)continue;
           const result=damageOne(state,actor,target,power,ability?.affinity ?? actor.affinity,rng,events,{cannotMiss:shared===true||context.cannotMiss,accuracy:shared===undefined?effect.accuracy??ability?.accuracy:undefined,outgoing,onHitHealPercent:drain,markConsumer:actor.side==='ally'&&ability&&target.side==='enemy'?{abilityId:ability.id,allowed:context.consumableMarkUids}:undefined});
