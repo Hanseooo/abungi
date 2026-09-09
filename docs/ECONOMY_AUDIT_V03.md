@@ -49,6 +49,21 @@ Each group below samples 3,000 shops across all three regions. Duplicate content
 | Without Leandre | 4.0 | 47.6% | 45.5% | 1.4% | 5.5% | 22.0 | 0 |
 | With Leandre | 5.0 | 45.5% | 48.3% | 1.8% | 4.4% | 21.8 | 0 |
 
+### Restock pricing
+
+Rerolling replaces the whole shelf and clears its sold-out list. The fee starts at 15 coins and climbs 15 per reroll at the same shop, so digging for a relic competes directly with buying one. Shop Chit discounts the fee alongside the prices. 3,000 shops per row; relic odds are cumulative across every shelf seen.
+
+| Chit | Rerolls used | Mean fee spent | Saw a relic |
+|---|---:|---:|---:|
+| no chit | 0 | 0 | 23.7% |
+| no chit | 1 | 15 | 40.7% |
+| no chit | 2 | 45 | 54.2% |
+| no chit | 3 | 90 | 65.0% |
+| shop-chit | 0 | 0 | 23.7% |
+| shop-chit | 1 | 13 | 40.7% |
+| shop-chit | 2 | 39 | 54.2% |
+| shop-chit | 3 | 79 | 65.0% |
+
 Leandre's fifth shelf is therefore real run-level utility rather than a combat-stat bonus. Rare Revive Kits remain possible but uncommon enough that a player cannot route around attrition assuming one will appear.
 
 ## Event decision audit

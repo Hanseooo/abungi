@@ -11,6 +11,8 @@ export type { ShopOffer };
 export interface PurchaseResult {ok:boolean;reason?:string;run:RunState}
 const clone=<T>(value:T):T=>JSON.parse(JSON.stringify(value)) as T;
 
+// Shop Chit is one fact stated in relics.ts; every price the shop quotes reads it from there.
+function shopDiscount(run:RunState):number{return run.relicIds.includes('shop-chit')?1-getRelic('shop-chit').value:1;}
 function priceFactor(rng:SeededRng):number{const [min,max]=SHOP_CONFIG.priceVariance;return min+rng.next()*(max-min);}
 function dealFor(factor:number):ShopOffer['deal']{return factor<=0.95?'good':factor>=1.05?'pricey':'standard';}
 function rarityWeight(item:ItemDefinition,regionIndex:number):number{
@@ -35,7 +37,7 @@ export function generateShopOffers(run:RunState,nodeId:string,rerollCount=0):Sho
   const rng=new SeededRng((run.seed^hashText(key))>>>0);
   const baseCount=BALANCE.shopBaseOffers;
   const count=baseCount+(run.party.some(p=>p.characterId==='leandre')?1:0);
-  const discounted=run.relicIds.includes('shop-chit')?0.88:1;
+  const discounted=shopDiscount(run);
   const itemPool=[...ITEMS];
   const offers:ShopOffer[]=[];
   const pushItem=(predicate:(item:ItemDefinition)=>boolean)=>{
@@ -62,7 +64,8 @@ export function generateShopOffers(run:RunState,nodeId:string,rerollCount=0):Sho
 
 // Each reroll costs more so digging for a specific relic drains the coins it would have bought.
 export function shopRerollCost(run:RunState):number{
-  return BALANCE.shopRerollBaseCost+(run.shopVisit?.rerollCount??0)*BALANCE.shopRerollCostStep;
+  const base=BALANCE.shopRerollBaseCost+(run.shopVisit?.rerollCount??0)*BALANCE.shopRerollCostStep;
+  return Math.max(1,Math.round(base*shopDiscount(run)));
 }
 
 export function shopRerollAvailability(run:RunState):{legal:boolean;reason?:string}{

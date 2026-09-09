@@ -104,6 +104,8 @@ test('shop reroll swaps the shelf at an escalating price',()=>{
   assert.notDeepEqual(rolled.run.shopVisit.offers.map(offer=>offer.id),before);
   assert.deepEqual(rolled.run.shopVisit.purchasedOfferIds,[]);
   assert.ok(shopRerollCost(rolled.run)>cost);
+  const chit=structuredClone(run);chit.relicIds=[...chit.relicIds,'shop-chit'];
+  assert.equal(shopRerollCost(chit),Math.round(cost*0.88));
   const broke={...rolled.run,coins:0};
   const denied=rerollShopOffers(broke);
   assert.equal(denied.ok,false);

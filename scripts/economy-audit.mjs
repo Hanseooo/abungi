@@ -2,8 +2,9 @@ import { writeFileSync } from 'node:fs';
 import { SeededRng } from '../.domain-build/core/rng/seededRng.js';
 import { availableRouteNodes, generateRegionRoute, minimumCombatNodesToBoss } from '../.domain-build/core/progression/route.js';
 import { advanceRegion, createRun } from '../.domain-build/core/progression/run.js';
-import { generateShopOffers } from '../.domain-build/core/progression/shop.js';
+import { generateShopOffers, shopRerollCost } from '../.domain-build/core/progression/shop.js';
 import { generateReward, encounterCoinRange } from '../.domain-build/core/progression/rewards.js';
+import { BALANCE } from '../.domain-build/balance/constants.js';
 import { ENCOUNTERS } from '../.domain-build/content/enemies.js';
 import { EVENTS } from '../.domain-build/content/events.js';
 
@@ -37,6 +38,32 @@ for(const [kind,party] of [['base',['earl','hans','jiro']],['leandre',['earl','h
   }
 }
 
+// What a reroll actually buys: shelves seen, coins spent, and the odds a relic ever appears.
+const MAX_REROLLS=3;
+const rerollStats=[];
+for(const [kind,relicIds] of [['no chit',[]],['shop-chit',['shop-chit']]]){
+  const rows=[];
+  for(let used=0;used<=MAX_REROLLS;used++)rows.push({used,spend:0,relicRuns:0,runs:0});
+  for(let region=0;region<3;region++)for(let seed=1;seed<=1000;seed++){
+    const run=createRun(['earl','hans','jiro'],seed*13+region);
+    run.regionIndex=region;run.coins=9999;run.relicIds=[...relicIds];
+    const nodeId=`audit-reroll-r${region}-s${seed}`;
+    let offers=generateShopOffers(run,nodeId,0);
+    let sawRelic=offers.some(offer=>offer.kind==='relic');
+    let spend=0;
+    for(let used=0;used<=MAX_REROLLS;used++){
+      const row=rows[used];row.runs++;row.spend+=spend;if(sawRelic)row.relicRuns++;
+      if(used===MAX_REROLLS)break;
+      // shopRerollCost reads the fee off the visit, so the shelf is stepped here rather than through the store.
+      run.shopVisit={nodeId,offers,purchasedOfferIds:[],rerollCount:used};
+      spend+=shopRerollCost(run);
+      offers=generateShopOffers(run,nodeId,used+1);
+      sawRelic=sawRelic||offers.some(offer=>offer.kind==='relic');
+    }
+  }
+  rerollStats.push({kind,rows});
+}
+
 function sampleEventExposure(policy){
   const stats={assigned:[],entered:[],visited:[],repeatBefore:0,repeatAfter:0};const poolSize=EVENTS.filter(event=>event.weight>0).length;
   for(let seed=1;seed<=20000;seed++){let run=createRun(['earl','hans','marcus'],seed);const seen=new Set();for(let region=0;region<3;region++){for(const node of run.route.nodes)if(node.type==='event'&&node.eventId)stats.assigned.push(node.eventId);let currentNodeId=null;const completed=[];while(true){const choices=availableRouteNodes(run.route,currentNodeId,completed);if(!choices.length)break;const candidates=choices.filter(node=>node.type!=='boss');const pool=candidates.length?candidates:choices;const events=pool.filter(node=>node.type==='event');const nonEvents=pool.filter(node=>node.type!=='event');const node=policy==='event-first'?(events[0]??pool[0]):policy==='event-avoiding'?(nonEvents[0]??pool[0]):pool[new SeededRng(seed,region+completed.length+1).int(0,pool.length-1)];currentNodeId=node.id;completed.push(node.id);if(node.type==='event'&&node.eventId){stats.entered.push(node.eventId);if(seen.has(node.eventId)){if(seen.size<poolSize)stats.repeatBefore++;else stats.repeatAfter++;}seen.add(node.eventId);}}if(region<2)run=advanceRegion(run);}stats.visited.push(seen.size);}return stats;
@@ -59,6 +86,8 @@ md+=`\nNormal victories additionally offer two small Spoils choices: one greed o
 for(const [kind,stats] of Object.entries(shopStats)){
   md+=`| ${kind==='leandre'?'With Leandre':'Without Leandre'} | ${(stats.offers/stats.total).toFixed(1)} | ${pct(stats.common,stats.offers)} | ${pct(stats.uncommon,stats.offers)} | ${pct(stats.rare,stats.offers)} | ${pct(stats.relic,stats.offers)} | ${avg(stats.prices).toFixed(1)} | ${stats.duplicates} |\n`;
 }
+md+=`\n### Restock pricing\n\nRerolling replaces the whole shelf and clears its sold-out list. The fee starts at ${BALANCE.shopRerollBaseCost} coins and climbs ${BALANCE.shopRerollCostStep} per reroll at the same shop, so digging for a relic competes directly with buying one. Shop Chit discounts the fee alongside the prices. 3,000 shops per row; relic odds are cumulative across every shelf seen.\n\n| Chit | Rerolls used | Mean fee spent | Saw a relic |\n|---|---:|---:|---:|\n`;
+for(const group of rerollStats)for(const row of group.rows)md+=`| ${group.kind} | ${row.used} | ${(row.spend/row.runs).toFixed(0)} | ${pct(row.relicRuns,row.runs)} |\n`;
 md+=`\nLeandre's fifth shelf is therefore real run-level utility rather than a combat-stat bonus. Rare Revive Kits remain possible but uncommon enough that a player cannot route around attrition assuming one will appear.\n\n## Event decision audit\n\n| Event | Strategic tension |\n|---|---|\n`;
 const eventNotes={
   'rain-stall':'Item capacity versus small HP recovery.',
