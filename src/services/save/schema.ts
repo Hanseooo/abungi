@@ -44,6 +44,7 @@ const shopVisit=z.object({
   nodeId:z.string(),
   offers:z.array(shopOffer),
   purchasedOfferIds:z.array(z.string()),
+  rerollCount:z.number().int().nonnegative().default(0),
 }).nullable().refine(v=>{
   if(!v)return true;
   const offerIds=new Set(v.offers.map(o=>o.id));

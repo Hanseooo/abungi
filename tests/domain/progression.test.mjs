@@ -4,7 +4,7 @@ import { SeededRng } from '../../.domain-build/core/rng/seededRng.js';
 import { createRun, completeRouteNode, advanceRegion } from '../../.domain-build/core/progression/run.js';
 import { applyRestChoice, previewRestChoice } from '../../.domain-build/core/progression/rest.js';
 import { generateReward, claimReward } from '../../.domain-build/core/progression/rewards.js';
-import { generateShopOffers, purchaseShopOffer } from '../../.domain-build/core/progression/shop.js';
+import { generateShopOffers, purchaseShopOffer, shopRerollCost, rerollShopOffers } from '../../.domain-build/core/progression/shop.js';
 import { applyEventChoice, canChooseEvent } from '../../.domain-build/core/progression/events.js';
 import { inventoryCount } from '../../.domain-build/core/progression/inventory.js';
 import { availableRouteNodes } from '../../.domain-build/core/progression/route.js';
@@ -60,7 +60,7 @@ function createRunAtShop(){
     const shop=run.route.nodes.find(node=>node.type==='shop');
     if(!shop)continue;
     run.currentNodeId=shop.id;
-    run.shopVisit={nodeId:shop.id,offers:generateShopOffers(run,shop.id),purchasedOfferIds:[]};
+    run.shopVisit={nodeId:shop.id,offers:generateShopOffers(run,shop.id),purchasedOfferIds:[],rerollCount:0};
     return run;
   }
   throw new Error('Expected a seeded route with a shop.');
@@ -89,6 +89,25 @@ test('shop purchase uses the saved shelf and rejects a serialized replay',()=>{
   const replayAfterResume=purchaseShopOffer(resumed,offer.id);
   assert.equal(replayAfterResume.ok,false);
   assert.match(replayAfterResume.reason,/sold out/i);
+});
+
+test('shop reroll swaps the shelf at an escalating price',()=>{
+  const run=createRunAtShop();
+  run.coins=200;
+  const before=run.shopVisit.offers.map(offer=>offer.id);
+  const cost=shopRerollCost(run);
+  assert.ok(cost>0);
+  const rolled=rerollShopOffers(run);
+  assert.equal(rolled.ok,true);
+  assert.equal(rolled.run.coins,200-cost);
+  assert.equal(rolled.run.shopVisit.rerollCount,1);
+  assert.notDeepEqual(rolled.run.shopVisit.offers.map(offer=>offer.id),before);
+  assert.deepEqual(rolled.run.shopVisit.purchasedOfferIds,[]);
+  assert.ok(shopRerollCost(rolled.run)>cost);
+  const broke={...rolled.run,coins:0};
+  const denied=rerollShopOffers(broke);
+  assert.equal(denied.ok,false);
+  assert.deepEqual(denied.run,broke);
 });
 
 test('shop rejects unknown and completed-shop purchase requests without mutation',()=>{

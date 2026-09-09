@@ -30,8 +30,9 @@ function itemOffer(item:ItemDefinition,nodeId:string,index:number,discounted:num
   return {id:`${nodeId}-item-${index}-${item.id}`,kind:'item',contentId:item.id,name:item.name,description:item.description,price:Math.max(1,Math.round(item.price*factor)),rarity:item.rarity,deal:dealFor(variance)};
 }
 
-export function generateShopOffers(run:RunState,nodeId:string):ShopOffer[]{
-  const rng=new SeededRng((run.seed^hashText(`${run.regionIndex}:${nodeId}`))>>>0);
+export function generateShopOffers(run:RunState,nodeId:string,rerollCount=0):ShopOffer[]{
+  const key=rerollCount?`${run.regionIndex}:${nodeId}:r${rerollCount}`:`${run.regionIndex}:${nodeId}`;
+  const rng=new SeededRng((run.seed^hashText(key))>>>0);
   const baseCount=BALANCE.shopBaseOffers;
   const count=baseCount+(run.party.some(p=>p.characterId==='leandre')?1:0);
   const discounted=run.relicIds.includes('shop-chit')?0.88:1;
@@ -57,6 +58,34 @@ export function generateShopOffers(run:RunState,nodeId:string):ShopOffer[]{
   while(offers.length<baseCount&&itemPool.length)pushItem(()=>true);
   if(count>baseCount&&itemPool.length)pushItem(()=>true);
   return offers.slice(0,count);
+}
+
+// Each reroll costs more so digging for a specific relic drains the coins it would have bought.
+export function shopRerollCost(run:RunState):number{
+  return BALANCE.shopRerollBaseCost+(run.shopVisit?.rerollCount??0)*BALANCE.shopRerollCostStep;
+}
+
+export function shopRerollAvailability(run:RunState):{legal:boolean;reason?:string}{
+  if(run.status!=='active'||run.activeBattle||run.pendingReward)return{legal:false,reason:'Finish the current encounter first.'};
+  const node=run.currentNodeId?run.route.nodes.find(candidate=>candidate.id===run.currentNodeId):undefined;
+  if(!node||node.type!=='shop'||run.completedNodeIds.includes(node.id))return{legal:false,reason:'This shop is no longer available.'};
+  if(!run.shopVisit||run.shopVisit.nodeId!==node.id)return{legal:false,reason:'This shop shelf is unavailable.'};
+  const cost=shopRerollCost(run);
+  if(run.coins<cost)return{legal:false,reason:`NEED ${cost-run.coins} MORE`};
+  return{legal:true};
+}
+
+// The old shelf is gone, so nothing carries over as sold out; the reroll fee is what was paid for it.
+export function rerollShopOffers(input:RunState):PurchaseResult{
+  const availability=shopRerollAvailability(input);
+  if(!availability.legal)return{ok:false,reason:availability.reason,run:input};
+  const run=clone(input);
+  run.coins-=shopRerollCost(run);
+  const visit=run.shopVisit!;
+  visit.rerollCount+=1;
+  visit.offers=generateShopOffers(run,visit.nodeId,visit.rerollCount);
+  visit.purchasedOfferIds=[];
+  return{ok:true,run};
 }
 
 export function shopOfferAvailability(run:RunState,offerId:string):{legal:boolean;reason?:string}{

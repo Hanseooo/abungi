@@ -52,6 +52,8 @@ export const BALANCE = {
     scriptPreventFloor: 10,
   },
   shopBaseOffers: 4,
+  shopRerollBaseCost: 15,
+  shopRerollCostStep: 15,
   regionCount: 3,
   routeStagesBeforeBoss: 6,
   relicTierWeights: {

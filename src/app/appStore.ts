@@ -11,7 +11,7 @@ import { availableRouteNodes } from '../game/core/progression/route';
 import { applyFieldItem, discardFieldItem, type FieldItemCommand } from '../game/core/progression/fieldItems';
 import { applyRestChoice, previewRestChoice, type RestChoice } from '../game/core/progression/rest';
 import { generateReward, claimReward } from '../game/core/progression/rewards';
-import { generateShopOffers, purchaseShopOffer, type ShopOffer } from '../game/core/progression/shop';
+import { generateShopOffers, purchaseShopOffer, rerollShopOffers, shopRerollCost, type ShopOffer } from '../game/core/progression/shop';
 import { applyEventChoice } from '../game/core/progression/events';
 import type { EventSelection } from '../game/content/events';
 import { regionSceneId, resolveScene, type ResolvedScene, type SceneId } from '../game/content/scenes';
@@ -47,7 +47,7 @@ interface AppState{
   initialize():Promise<void>;continueRun():void;openNewRun():void;backToTitle():void;toggleParty(id:string):void;confirmParty():Promise<void>;
   selectNode(id:string):Promise<void>;battleSkill(actorId:string,abilityId:string,targetIds:string[]):Promise<void>;battleGuard(actorId:string):Promise<void>;battleItem(actorId:string,itemId:string,targetIds:string[]):Promise<void>;
   claimRewardChoice(relicId?:string,upgrade?:{characterId:string;abilityId:string},spoilsId?:RewardSpoilsChoice['id']):Promise<void>;
-  purchaseOffer(offerId:string):Promise<void>;leaveShop():Promise<void>;chooseRest(choice:RestChoice):Promise<void>;leaveRest():Promise<void>;chooseEvent(choiceId:string,selection?:EventSelection):Promise<void>;useFieldItem(command:FieldItemCommand):Promise<void>;discardItem(itemId:string,expectedQuantity:number):Promise<void>;finishEvent():void;
+  purchaseOffer(offerId:string):Promise<void>;rerollShop():Promise<void>;leaveShop():Promise<void>;chooseRest(choice:RestChoice):Promise<void>;leaveRest():Promise<void>;chooseEvent(choiceId:string,selection?:EventSelection):Promise<void>;useFieldItem(command:FieldItemCommand):Promise<void>;discardItem(itemId:string,expectedQuantity:number):Promise<void>;finishEvent():void;
   openSettings():void;openGuide(section?:string):void;openMoveInfo(abilityId:string):void;openStatusInfo(statusId:StatusId):void;openEffectInfo(effectId:BattleEffectId):void;openCharacterInfo(characterId:string):void;openItemInfo(itemId:string):void;openEnemyInfo(enemyId:string):void;closeOverlay():void;dismissScene():void;updateSettings(next:Partial<SettingsState>):Promise<void>;clearError():void;resetCorruptSave():Promise<void>;abandonRun():Promise<void>;
 }
 
@@ -139,7 +139,7 @@ export const useAppStore=create<AppState>((set,get)=>{
       try{
         let run=clone(current);run.currentNodeId=node.id;
         if(current.shopVisit&&current.shopVisit.nodeId!==node.id)run.shopVisit=null;
-        if(node.type==='shop'&&!run.shopVisit)run.shopVisit={nodeId:node.id,offers:generateShopOffers(run,node.id),purchasedOfferIds:[]};
+        if(node.type==='shop'&&!run.shopVisit)run.shopVisit={nodeId:node.id,offers:generateShopOffers(run,node.id),purchasedOfferIds:[],rerollCount:0};
         set({run,error:null,notice:null,eventResult:null});
         await persist(run,get().profile,get().settings);
         if(node.type==='battle'||node.type==='elite'||node.type==='boss'){
@@ -192,6 +192,18 @@ export const useAppStore=create<AppState>((set,get)=>{
         if(offer?.kind==='relic'){const discovered=new Set(profile.discoveredRelics);discovered.add(offer.contentId);profile={...profile,discoveredRelics:[...discovered]};}
         set({run:result.run,profile,error:null,notice:'Purchase packed.'});
         await persist(result.run,profile,get().settings);
+      }finally{set({isResolving:false});}
+    },
+    async rerollShop(){
+      if(!actionReady('shop'))return;
+      const current=get().run;
+      if(!current)return;
+      set({isResolving:true,error:null});
+      try{
+        const cost=shopRerollCost(current);const result=rerollShopOffers(current);
+        if(!result.ok){set({error:result.reason??'Reroll failed.'});return;}
+        set({run:result.run,error:null,notice:`New stock for ${cost} coins.`});
+        await persist(result.run,get().profile,get().settings);
       }finally{set({isResolving:false});}
     },
     async leaveShop(){

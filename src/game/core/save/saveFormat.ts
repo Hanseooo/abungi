@@ -43,7 +43,7 @@ function migrateRunV1toV2(run:unknown):RunState {
   const nodes=(r.route as {nodes?:{id:string;type:string}[]})?.nodes;
   const currentNode=r.currentNodeId&&nodes?nodes.find(n=>n.id===r.currentNodeId):undefined;
   if(currentNode?.type==='shop'&&!r.activeBattle&&!r.pendingReward&&!r.completedNodeIds?.includes(currentNode.id)){
-    try{shopVisit={nodeId:currentNode.id,offers:generateShopOffers(r,currentNode.id),purchasedOfferIds:[]};}
+    try{shopVisit={nodeId:currentNode.id,offers:generateShopOffers(r,currentNode.id),purchasedOfferIds:[],rerollCount:0};}
     catch{shopVisit=null;}
   }
 

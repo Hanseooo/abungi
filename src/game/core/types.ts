@@ -291,4 +291,5 @@ export interface ShopVisit {
   nodeId: string;
   offers: ShopOffer[];
   purchasedOfferIds: string[];
+  rerollCount: number;
 }

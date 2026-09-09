@@ -1104,3 +1104,6 @@ dialog.global-overlay:not([open]) { display: none; }
 .press-relic-options small { display:block; margin-top:4px; font-size:.75rem; line-height:1.35; font-weight:700; }
 .press-odds { display:grid; gap:5px; margin:4px 0; padding:10px; border:2px dashed var(--ink); background:#eadbc4; font-weight:800; }
 .press-odds p { margin:0; }
+
+.shop-reroll{display:flex;flex-direction:column;align-items:center;gap:.35rem;margin:.75rem 0 .25rem;}
+.shop-reroll small{opacity:.7;text-align:center;max-width:34ch;}
