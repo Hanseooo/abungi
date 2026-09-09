@@ -64,8 +64,16 @@ for (const [prefix,count] of [['character-',13],['enemy-',10],['elite-',3],['bos
   const found = cutouts.filter(name => name.startsWith(prefix) && name.endsWith('.svg')).length;
   found === count ? ok(`${count} ${prefix} cutouts`) : fail(`expected ${count} ${prefix} cutouts, found ${found}`);
 }
-const audio = readdirSync(join(root,'public/audio')).filter(name=>name.endsWith('.wav'));
-audio.length >= 16 ? ok(`${audio.length} local audio files`) : fail(`expected at least 16 local audio files, found ${audio.length}`);
+const audio = new Set(readdirSync(join(root,'public/audio')).filter(name=>name.endsWith('.wav')));
+// Counting files let exploration-music.wav go missing for a whole release: the runtime asked for
+// it by name and got a silent 404. Every name the engine can request is checked instead.
+const engine = read('src/services/audio/audioEngine.ts');
+const tracks = [...(engine.match(/export type MusicId=([^;]+);/)?.[1] ?? '').matchAll(/'([^']+)'/g)].map(match=>match[1]);
+const samples = [...engine.matchAll(/file:'([^']+)'/g)].map(match=>match[1]);
+const requested = [...new Set([...tracks,...samples])].sort();
+const missing = requested.filter(name=>!audio.has(`${name}.wav`));
+requested.length ? ok(`${requested.length} audio names requested by the engine`) : fail('found no audio names in audioEngine.ts');
+missing.length ? fail(`missing audio files: ${missing.join(', ')}`) : ok(`all ${requested.length} requested audio files present`);
 
 const lock = read('pnpm-lock.yaml');
 lock.includes("lockfileVersion: '9.0'") ? ok('pnpm lockfile present') : fail('unexpected/missing pnpm lockfile version');
