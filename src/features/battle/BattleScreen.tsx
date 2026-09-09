@@ -137,7 +137,7 @@ export function BattleScreen(){
       {groupPpPreviews.length>0&&<div className="battle-item-preview" aria-live="polite"><strong>PP PREVIEW</strong>{groupPpPreviews.map(entry=><span key={entry.unit.id}>{entry.unit.displayName}: {getAbility(entry.preview!.abilityId).name} {entry.preview!.before} → {entry.preview!.after}</span>)}</div>}
       {selectedMode&&!oneTarget(selectedMode)&&<div className="confirm-action"><span>{targetInstruction}</span><PaperButton variant="ink" disabled={isResolving} onClick={submitAuto}>CONFIRM USE</PaperButton><PaperButton variant="quiet" onClick={()=>{setSelectedSkill(null);setSelectedItem(null)}}>CANCEL</PaperButton></div>}
       {selectedMode&&oneTarget(selectedMode)&&<div className="target-hint" aria-live="polite">{targetInstruction} <button onClick={()=>{setSelectedSkill(null);setSelectedItem(null)}}>CANCEL</button></div>}
-      {isResolving&&<div className="input-lock"><span className="resolving-bar"/>INPUT LOCKED · {director.index+1}/{Math.max(1,director.beats.length)} ACTION BEATS</div>}
+      {isResolving&&<div className="input-lock"><span className="resolving-bar"/>INPUT LOCKED</div>}
     </section>
   </main>;
 }

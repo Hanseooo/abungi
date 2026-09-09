@@ -7,7 +7,7 @@ export function SettingsScreen(){
   const settings=useAppStore(s=>s.settings);const update=useAppStore(s=>s.updateSettings);const close=useAppStore(s=>s.closeOverlay);
   useEffect(()=>audioEngine.configure(settings),[settings]);
   return <section className="overlay-paper settings-panel" aria-labelledby="settings-title">
-    <header className="overlay-heading"><span className="tape-label">LOCAL OPTIONS</span><h2 id="settings-title">Settings</h2><p>Audio and motion choices are saved locally. Closing this sheet returns exactly where you were.</p></header>
+    <header className="overlay-heading"><span className="tape-label">LOCAL OPTIONS</span><h2 id="settings-title">Settings</h2><p>Audio and motion choices are saved locally.</p></header>
     <section className="settings-board">
       <label className="setting-row"><span><strong>Master audio</strong><small>Mute music and effects without changing individual levels.</small></span><input type="checkbox" checked={!settings.masterMuted} onChange={e=>void update({masterMuted:!e.target.checked})}/></label>
       <label className="setting-row"><span><strong>Music volume</strong><small>{Math.round(settings.musicVolume*100)}%</small></span><input type="range" min="0" max="1" step="0.05" value={settings.musicVolume} onChange={e=>void update({musicVolume:Number(e.target.value)})}/></label>

@@ -8,8 +8,8 @@ import { charAccentStyle } from '../../ui/charAccent';
 
 export function PartySelectScreen(){
   const selected=useAppStore(s=>s.selectedParty);const toggle=useAppStore(s=>s.toggleParty);const confirm=useAppStore(s=>s.confirmParty);const back=useAppStore(s=>s.backToTitle);const error=useAppStore(s=>s.error);const info=useAppStore(s=>s.openCharacterInfo);
-  return <main className="screen party-screen"><GameHeader title="Choose Your Three" subtitle="All eleven are available. Your party stays active together, and HP/PP persist through the run."/>
-    <div className="selection-meter"><b>{selected.length}/3</b><span>{selected.length===3?'Party locked in. Review the kits, then start.':'Choose for synergy, affinity coverage, sustain and PP economy.'}</span></div>
+  return <main className="screen party-screen"><GameHeader title="Choose Your Three" subtitle="Your party stays active together, and HP/PP persist through the run."/>
+    <div className="selection-meter"><b>{selected.length}/3</b><span>{selected.length===3?'Ready to start.':'Choose 3 characters.'}</span></div>
     <section className="roster-grid" aria-label="Playable roster">{CHARACTERS.map((c,index)=>{const isSelected=selected.includes(c.id);return <article key={c.id} style={charAccentStyle(c)} className={`roster-card ${isSelected?'selected':''}`}>
       <button className="roster-select-hit" aria-pressed={isSelected} onClick={()=>toggle(c.id)} aria-label={`${isSelected?'Remove':'Select'} ${c.displayName}`}><span className="pick-number">{isSelected?selected.indexOf(c.id)+1:String(index+1).padStart(2,'0')}</span><CutoutArt assetId={c.assetId} name={c.displayName}/><span className="roster-copy"><strong>{c.displayName}</strong><AffinityMark affinity={c.affinity} small/><small>{c.role}</small></span><span className="mini-stats"><i>HP <b>{c.stats.maxHp}</b></i><i>POW <b>{c.stats.power}</b></i><i>GRD <b>{c.stats.guard}</b></i><i>SPD <b>{c.stats.speed}</b></i></span></button>
       <button className="roster-info" onClick={()=>info(c.id)} aria-label={`View ${c.displayName} kit`}>KIT + INFO</button>

@@ -25,7 +25,7 @@ function RestChoiceCard({run,choice,preview,disabled,onChoose}:{run:RunState;cho
 export function RestScreen(){
   const run=useAppStore(s=>s.run)!;const choose=useAppStore(s=>s.chooseRest);const leave=useAppStore(s=>s.leaveRest);const isResolving=useAppStore(s=>s.isResolving);const error=useAppStore(s=>s.error);const [confirmLeave,setConfirmLeave]=useState(false);
   const recover=previewRestChoice(run,'recover');const refresh=previewRestChoice(run,'refresh');const hasReviveKit=run.inventory.some(item=>item.itemId==='revive-kit');
-  return <main className="screen rest-screen"><GameHeader title="A Quiet Patch" subtitle="Pick one. Rest never restores everything; attrition still matters."/>
+  return <main className="screen rest-screen"><GameHeader title="A Quiet Patch" subtitle="Choose one recovery."/>
     <section className="rest-party" aria-label="Party at Rest">{run.party.map(p=>{const c=getCharacter(p.characterId);const pp=Object.values(p.abilityPP);return <div key={p.characterId}><strong>{c.displayName}</strong><span>{p.hp}/{c.stats.maxHp} HP</span><span>{pp.reduce((a,b)=>a+b,0)} PP left</span></div>})}</section>
     <section className="rest-choices" aria-label="Rest choices"><RestChoiceCard run={run} choice="recover" preview={recover} disabled={isResolving} onChoose={()=>void choose('recover')}/><RestChoiceCard run={run} choice="refresh" preview={refresh} disabled={isResolving} onChoose={()=>void choose('refresh')}/></section>
     {hasReviveKit&&<p className="rest-revive-note">Revive Kit can bring back one KO ally at 30% HP on the resolved route if a field use remains.</p>}

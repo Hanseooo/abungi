@@ -13,7 +13,7 @@ export function ShopScreen(){
     <div className="shop-sign"><span>COINS IN POCKET</span><strong>{run.coins}</strong><small>PACK · {used}/{capacity}</small></div>
     {notice&&<p className="paper-notice">{notice}</p>}{error&&<p className="inline-error" role="alert">{error}</p>}
     <section className="shop-shelf">{offers.map(o=>{const availability=shopOfferAvailability(run,o.id);const reason=availability.legal?null:availability.reason??'UNAVAILABLE';return <article className={`shop-offer rarity-${o.rarity} deal-${o.deal}`} key={o.id}><div className="offer-topline"><span className={`offer-kind kind-${o.kind}`}>{o.kind.toUpperCase()}</span><span className="rarity-stamp">{o.rarity.toUpperCase()}</span>{o.deal!=='standard'&&<span className="deal-stamp">{o.deal==='good'?'GOOD DEAL':'PRICEY'}</span>}</div><h2>{o.name}</h2><p>{o.description}</p><div className="shop-buy-row"><strong>{o.price} COINS</strong>{o.kind==='item'&&<button className="offer-info" onClick={()=>openItem(o.contentId)}>INFO</button>}<PaperButton disabled={isResolving||Boolean(reason)} title={reason??undefined} onClick={()=>void buy(o.id)}>{reason??'BUY'}</PaperButton></div></article>})}</section>
-    <p className="shop-footnote">Prices vary slightly by stop. Later regions improve rare-stock odds, but a shop is never guaranteed to solve your run.</p>
+    <p className="shop-footnote">Prices vary slightly by stop. Later regions improve rare-stock odds.</p>
     <footer className="sticky-actions single"><PaperButton variant="ink" disabled={isResolving} onClick={()=>void leave()}>LEAVE SHOP</PaperButton></footer>
   </main>;
 }
