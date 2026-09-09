@@ -17,7 +17,7 @@ import type { EventSelection } from '../game/content/events';
 import { regionSceneId, resolveScene, type ResolvedScene, type SceneId } from '../game/content/scenes';
 import { DEFAULT_PROFILE, DEFAULT_SETTINGS, type SavePayload } from '../game/core/save/saveFormat';
 import { createSaveRepository } from '../services/save/createSaveRepository';
-import { combatPresentationDuration } from '../features/battle/combatDirector';
+import { combatPresentationDuration, entranceDuration } from '../features/battle/combatDirector';
 
 export type AppScreen='title'|'party'|'route'|'battle'|'reward'|'shop'|'rest'|'event'|'results';
 export type OverlayState=null|{kind:'settings'}|{kind:'guide';section?:string}|{kind:'move';abilityId:string}|{kind:'status';statusId:StatusId}|{kind:'character';characterId:string}|{kind:'item';itemId:string}|{kind:'enemy';enemyId:string}|{kind:'effect';effectId:BattleEffectId};
@@ -73,7 +73,7 @@ export const useAppStore=create<AppState>((set,get)=>{
     const battle=createBattle(run.party.map(p=>p.characterId),encounterId,rng,{party:run.party,coins:run.coins,relicIds:run.relicIds,regionIndex:run.regionIndex,openingEvents});
     run.activeBattle=battle;run.rngState=rng.serialize().state;run.coins=battle.availableCoins;
     const discovered=new Set(get().profile.discoveredEnemies);for(const id of battle.enemies)discovered.add(battle.units[id].sourceId);
-    const entrance={openingEvents,duration:2400};
+    const entrance={openingEvents,duration:entranceDuration(get().settings)};
     const profile={...get().profile,discoveredEnemies:[...discovered]};set({run,profile,screen:'battle',battleEvents:[],battleEntrance:entrance,eventResult:null,error:null,isResolving:true});
     if(battle.tier==='elite')enqueueScene('elite-intro',`elite:${run.currentNodeId??battle.id}`,run,{encounterId,extraLine:{speaker:'TABLE',text:`${battle.enemies.map(id=>battle.units[id].displayName).join(' & ')} steps onto the stage.`}});
     if(battle.tier==='boss'){

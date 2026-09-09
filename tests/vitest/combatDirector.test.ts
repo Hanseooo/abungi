@@ -70,6 +70,14 @@ describe('combat HP presentation', () => {
     expect(combatDirector.combatBeatDuration(chained, { animationSpeed: 2, reducedMotion: false })).toBe(211);
   });
 
+  it('scales the encounter entrance duration by animationSpeed and reducedMotion', () => {
+    expect(combatDirector.entranceDuration({animationSpeed:1,reducedMotion:false})).toBe(2400);
+    expect(combatDirector.entranceDuration({animationSpeed:2,reducedMotion:false})).toBe(1200);
+    expect(combatDirector.entranceDuration({animationSpeed:3,reducedMotion:false})).toBe(800);
+    expect(combatDirector.entranceDuration({animationSpeed:1,reducedMotion:true})).toBe(1080);
+    expect(combatDirector.entranceDuration({animationSpeed:3,reducedMotion:true})).toBe(400);
+  });
+
   it('moves the protector HP bar for a transfer event', () => {
     const events: CombatEvent[] = [
       { type: 'actionStart', actorId: 'enemy-0-wisp', label: 'Flicker', side: 'enemy' },

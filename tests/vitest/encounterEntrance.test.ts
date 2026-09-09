@@ -17,14 +17,14 @@ it.each([
   const opening = useAppStore.getState().selectNode(run.route.startNodeIds[0]);
   await vi.advanceTimersByTimeAsync(0);
   expect(useAppStore.getState().isResolving).toBe(true);
-  expect(useAppStore.getState()).toHaveProperty('battleEntrance.duration', 2400);
+  expect(useAppStore.getState()).toHaveProperty('battleEntrance.duration', 1200);
   expect(useAppStore.getState().battleEvents).toEqual([]);
   const before = JSON.stringify(useAppStore.getState().run);
   const battle = useAppStore.getState().run!.activeBattle!;
   await useAppStore.getState().battleGuard(battle.turnOrder[battle.turnIndex]);
   expect(JSON.stringify(useAppStore.getState().run)).toBe(before);
-  await vi.advanceTimersByTimeAsync(2399);
-  expect(useAppStore.getState()).toHaveProperty('battleEntrance.duration', 2400);
+  await vi.advanceTimersByTimeAsync(1199);
+  expect(useAppStore.getState()).toHaveProperty('battleEntrance.duration', 1200);
   expect(useAppStore.getState().battleEvents).toEqual([]);
   await vi.advanceTimersByTimeAsync(1);
   expect(useAppStore.getState()).toHaveProperty('battleEntrance', null);

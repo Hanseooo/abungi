@@ -88,6 +88,10 @@ function combatPacing(beat:CombatBeat):number{
   }
 }
 
+export function entranceDuration(settings:Pick<SettingsState,'animationSpeed'|'reducedMotion'>):number{
+  return settings.reducedMotion?Math.max(400,Math.round(2400*.45/settings.animationSpeed)):Math.round(2400/settings.animationSpeed);
+}
+
 export function combatPresentationDuration(events:CombatEvent[],settings:Pick<SettingsState,'animationSpeed'|'reducedMotion'>):number{
   const beats=buildCombatBeats(events);return Math.max(80,beats.reduce((sum,beat)=>sum+combatBeatDuration(beat,settings),0));
 }
