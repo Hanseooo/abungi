@@ -33,7 +33,7 @@ for(const [kind,party] of [['base',['earl','hans','jiro']],['leandre',['earl','h
     const offers=generateShopOffers(run,`audit-r${region}-s${seed}`);const stats=shopStats[kind];stats.total++;
     if(new Set(offers.map(o=>o.contentId)).size!==offers.length)stats.duplicates++;
     stats.offers+=offers.length;
-    for(const offer of offers){stats[offer.rarity]++;stats.prices.push(offer.price);}
+    for(const offer of offers){if(offer.kind==='relic')stats.relic++;else stats[offer.rarity]++;stats.prices.push(offer.price);}
   }
 }
 
