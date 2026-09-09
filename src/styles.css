@@ -316,8 +316,8 @@ h1, h2, .title-mark, .paper-button, .route-node b, .tape-label, .eyebrow { font-
 .unit-cutout-wrap.is-guarding { animation: guard-brace calc(380ms * var(--anim-scale,1)) cubic-bezier(.25,.8,.4,1); }
 .unit-cutout-wrap.is-revived { animation: revive-rise calc(440ms * var(--anim-scale,1)) cubic-bezier(.2,.8,.3,1) both; }
 .unit-cutout-wrap.is-ko { filter:grayscale(.9) brightness(.65); transform:rotate(11deg) translateY(8px); opacity:.58; }
-.combat-message { grid-area:message; position:relative; z-index:8; min-height:44px; border:2px solid var(--ink); background:var(--ink); color:var(--paper); padding:7px 10px; display:flex; align-items:center; box-shadow:2px 3px 0 var(--mustard); }
-.combat-message strong { font-size:.78rem; line-height:1.25; overflow-wrap:anywhere; }
+.combat-message { grid-area:message; position:relative; z-index:8; min-height:44px; border:2px solid var(--ink); background:var(--ink); color:var(--paper); padding:7px 10px; display:flex; flex-wrap:wrap; align-items:center; gap:2px 10px; box-shadow:2px 3px 0 var(--mustard); }
+.combat-message strong { flex:1 0 100%; font-size:.78rem; line-height:1.25; overflow-wrap:anywhere; }
 .combat-message small { grid-column:1/-1; color:#f4a89e; font-size:.62rem; font-weight:800; }
 .combat-message.is-error { background:var(--red-dark); }
 .battle-hud { grid-area:hud; min-height:48px; display:grid; gap:4px; }

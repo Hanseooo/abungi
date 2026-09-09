@@ -4,7 +4,7 @@ import { RELICS } from '../../content/relics.js';
 
 export const SAVE_SCHEMA_VERSION = 3 as const;
 export const DEFAULT_PROFILE:ProfileState={runsStarted:0,wins:0,bestScore:0,bossesDefeated:0,discoveredRelics:[],discoveredEnemies:[],characterUsage:{}};
-export const DEFAULT_SETTINGS:SettingsState={masterMuted:false,musicVolume:0.55,sfxVolume:0.75,animationSpeed:2,reducedMotion:false};
+export const DEFAULT_SETTINGS:SettingsState={masterMuted:false,musicVolume:0.55,sfxVolume:0.75,animationSpeed:1,reducedMotion:false};
 
 export interface SavePayload {activeRun:RunState|null;profile:ProfileState;settings:SettingsState}
 export interface SaveEnvelopeV1 {schemaVersion:1;timestamp:string;revision:number;payload:SavePayload}

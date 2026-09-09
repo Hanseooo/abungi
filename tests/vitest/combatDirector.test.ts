@@ -57,6 +57,19 @@ describe('combat HP presentation', () => {
     expect(combatDirector.combatBeatDuration(heavyImpact, { animationSpeed: 1, reducedMotion: false })).toBe(653);
   });
 
+  it('holds every chained multi-hit beat for the full cardboard-hit animation', () => {
+    const chained: combatDirector.CombatBeat = {
+      phase: 'resolve',
+      chained: true,
+      events: [{ type: 'damage', targetId: 'enemy', amount: 12, critical: false, affinity: 'normal' }],
+      action: { type: 'actionStart', actorId: 'ally', label: 'Drive-By', side: 'ally', choreography: 'multi-hit' },
+      targetIds: ['enemy'],
+    };
+    // styles.css: --dur-hit is 330ms * --anim-scale, and --anim-scale is 1.28 at 1x.
+    expect(combatDirector.combatBeatDuration(chained, { animationSpeed: 1, reducedMotion: false })).toBe(422);
+    expect(combatDirector.combatBeatDuration(chained, { animationSpeed: 2, reducedMotion: false })).toBe(211);
+  });
+
   it('moves the protector HP bar for a transfer event', () => {
     const events: CombatEvent[] = [
       { type: 'actionStart', actorId: 'enemy-0-wisp', label: 'Flicker', side: 'enemy' },

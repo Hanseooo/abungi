@@ -65,7 +65,9 @@ export function combatBeatDuration(beat:CombatBeat,settings:Pick<SettingsState,'
     return Math.round(announceBase*combatPacing(beat)/settings.animationSpeed);
   }
   if(settings.reducedMotion)return Math.max(90,Math.round(220/settings.animationSpeed));
-  if(beat.chained)return Math.round(215*combatPacing(beat)/settings.animationSpeed);
+  // 330ms is the --dur-hit base in styles.css: a chained hit beat must outlast the
+  // cardboard-hit animation it triggers, or multi-hit moves play a speed faster than the rest.
+  if(beat.chained)return Math.round(330*combatPacing(beat)/settings.animationSpeed);
   const impacts=beat.events.filter(event=>['damage','heal','statusApplied','summon','deployableTrigger','revive','bossPhase','transfer','prevented','effectApplied'].includes(event.type)).length;
   return Math.round((410+Math.min(340,impacts*85))*combatPacing(beat)/settings.animationSpeed);
 }
